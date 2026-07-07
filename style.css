@@ -1,0 +1,166 @@
+/* Masjid Daar Us Sunnah — entrance signage TV, static 6-panel community board.
+   Palette/fonts unchanged from the prior slide-deck build (charcoal + gold,
+   Cormorant Garamond / DM Sans / Amiri Quran) — re-theme is a separate phase.
+   Layout + type scale rebuilt for fixed quadrant panels instead of full-screen
+   slides. Strict 8pt spacing grid. No animation. */
+:root{
+  /* ---- colour (unchanged — charcoal + logo gold) ---- */
+  --color-background:#2E2E2E;
+  --color-surface:#383838;
+  --color-surface-2:#424242;
+  --color-border:#4C4C4C;
+  --color-foreground:#F5F3EE;
+  --color-muted:#A8A29A;
+  --color-gold:#B98D4E;
+  --color-gold-bright:#DBB768;
+  --color-gold-deep:#8A6A3A;
+  --color-on-gold:#2E2E2E;
+  /* ---- typography (unchanged fonts) ---- */
+  --font-serif:"Cormorant Garamond","Georgia",serif;
+  --font-sans:"DM Sans",-apple-system,"Segoe UI",Arial,sans-serif;
+  --font-arabic:"Amiri Quran","Amiri","Geeza Pro","Noto Naskh Arabic",serif;
+  /* ---- type scale — resized for quadrant panels (was full-screen slides) ---- */
+  --text-badge:1.6vh; --text-xs:1.8vh; --text-sm:2.1vh; --text-md:2.4vh; --text-lg:2.8vh;
+  --text-panel-title:2.5vh;
+  --text-ring-name:2.6vh; --text-ring-time:5.4vh;
+  --text-verse-ar:2.6vh; --text-verse-en:1.9vh;
+  --text-row-time:2.8vh; --text-edate:3vh;
+  /* ---- spacing: strict 8pt grid (unchanged) ---- */
+  --s-half:4px; --s1:8px; --s2:16px; --s3:24px; --s4:32px;
+  --s5:40px; --s6:48px; --s8:64px; --s10:80px;
+  /* ---- radius / elevation (unchanged) ---- */
+  --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
+  --shadow-card:0 8px 24px rgba(0,0,0,.35);
+  --glow-gold:0 16px 48px -16px rgba(185,141,78,.55);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;overflow:hidden}
+body{
+  background:radial-gradient(120% 120% at 50% 0%,#343434 0%,var(--color-background) 55%,#262626 100%);
+  color:var(--color-foreground);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;
+}
+
+/* ---------- shell ---------- */
+#stage{position:relative;height:100vh;width:100vw;display:flex;flex-direction:column}
+header#topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--s3) var(--s8);flex:0 0 auto}
+#brand{display:flex;align-items:center;gap:var(--s3)}
+#brand img{height:7.2vh;width:auto;display:block}
+#brand-text{font-family:var(--font-serif);font-size:var(--text-lg);color:var(--color-foreground);letter-spacing:.02em}
+#brand-text .sep{color:var(--color-gold);margin:0 var(--s1)}
+#dateblock{text-align:right;display:flex;flex-direction:column;gap:var(--s-half)}
+#date-line{font-family:var(--font-sans);font-size:var(--text-md);color:var(--color-foreground);font-weight:600}
+#date-line .sep{color:var(--color-gold);margin:0 var(--s1)}
+#time-en{font-variant-numeric:tabular-nums}
+#date-ar{font-size:var(--text-sm);color:var(--color-gold);font-family:var(--font-arabic);
+  direction:rtl;unicode-bidi:isolate;line-height:1.7}
+
+/* ---------- board: fixed 3x2 grid, no rotation ---------- */
+#board{
+  flex:1 1 auto;min-height:0;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  grid-template-rows:1.1fr 1fr;
+  grid-template-areas:
+    "ring events events"
+    "prayers reminder contact";
+  gap:var(--s3);
+  padding:0 var(--s8) var(--s6);
+}
+#panel-ring{grid-area:ring}
+#panel-events{grid-area:events}
+#panel-prayers{grid-area:prayers}
+#panel-reminder{grid-area:reminder}
+#panel-contact{grid-area:contact}
+
+.panel{
+  border:1px solid var(--color-border);border-radius:var(--radius-lg);
+  background:var(--color-surface);box-shadow:var(--shadow-card);
+  padding:var(--s3) var(--s4);display:flex;flex-direction:column;min-height:0;overflow:hidden;
+}
+.panel-title{font-family:var(--font-serif);font-size:var(--text-panel-title);color:var(--color-gold);
+  letter-spacing:.1em;text-transform:uppercase;font-weight:600;text-align:center;
+  padding-bottom:var(--s2);margin-bottom:var(--s2);border-bottom:1px solid var(--color-border);flex:0 0 auto}
+
+/* ---------- left panel: Next Prayer ring ---------- */
+#panel-ring{align-items:center;text-align:center}
+.ring-content{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:var(--s3);overflow:hidden}
+.ring-wrap{position:relative;width:min(26vh,20vw);aspect-ratio:1/1;flex:0 0 auto}
+.ring-svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--color-border);stroke-width:10}
+.ring-progress{fill:none;stroke:var(--color-gold);stroke-width:10;stroke-linecap:round}
+.ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:var(--s-half)}
+#ring-label{font-family:var(--font-sans);font-size:var(--text-badge);letter-spacing:.3em;
+  text-transform:uppercase;color:var(--color-muted)}
+.ring-name-ar{font-family:var(--font-arabic);font-size:var(--text-ring-name);color:var(--color-gold);direction:rtl}
+#ring-name-en{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);
+  text-transform:uppercase;letter-spacing:.1em}
+#ring-time{font-family:var(--font-sans);font-size:var(--text-ring-time);color:var(--color-gold);
+  font-variant-numeric:tabular-nums;font-weight:500}
+#jamaa-trigger{font-family:var(--font-sans);font-size:var(--text-sm);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--color-on-gold);background:var(--color-gold);
+  padding:var(--s1) var(--s3);border-radius:var(--radius-pill);font-weight:700;box-shadow:var(--glow-gold)}
+
+/* ---------- right panel: Upcoming Events ---------- */
+.events-list{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--s2)}
+.ecard{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);
+  padding:var(--s2) var(--s3);display:flex;align-items:center;gap:var(--s3);flex:1 1 0;min-height:0}
+.ecard:first-child{border-color:var(--color-gold);
+  background:linear-gradient(90deg,rgba(185,141,78,.05),rgba(185,141,78,.14))}
+.edate{flex:0 0 auto;text-align:center;min-width:56px}
+.ed{font-family:var(--font-sans);font-size:var(--text-edate);color:var(--color-gold);line-height:1;font-weight:500}
+.em{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--color-muted)}
+.einfo{flex:1 1 auto;min-width:0}
+.en{font-family:var(--font-serif);font-size:var(--text-md);color:var(--color-foreground)}
+.edesc{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ex{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);margin-top:2px}
+.etime{color:var(--color-gold-bright)}
+
+/* ---------- bottom-left: Prayer Times list (6 rows) ---------- */
+.prayer-list{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.prow{display:flex;align-items:center;justify-content:space-between;padding:var(--s1) var(--s2);
+  border-bottom:1px solid var(--color-border);flex:1 1 0}
+.prow:last-child{border-bottom:none}
+.prow-left{display:flex;align-items:baseline;gap:var(--s2)}
+.prow-ar{font-family:var(--font-arabic);font-size:var(--text-md);color:var(--color-muted);direction:rtl}
+.prow-en{font-family:var(--font-sans);font-size:var(--text-sm);color:var(--color-muted);
+  text-transform:uppercase;letter-spacing:.06em}
+.prow-right{text-align:right}
+.prow-time{font-family:var(--font-sans);font-size:var(--text-row-time);color:var(--color-foreground);
+  font-variant-numeric:tabular-nums;font-weight:500}
+.prow-iqama{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted)}
+.prow.passed{opacity:.72}   /* keeps passed prayers legible on TV (a11y contrast) */
+.prow.next{border-radius:var(--radius-md);border-bottom-color:transparent;
+  background:linear-gradient(90deg,rgba(185,141,78,.18),rgba(185,141,78,.03));
+  box-shadow:0 0 0 1px var(--color-gold)}
+.prow.next .prow-ar{color:var(--color-gold)}
+.prow.next .prow-en{color:var(--color-gold-bright)}
+.prow.next .prow-time{color:var(--color-gold)}
+.prow.next .prow-iqama{color:var(--color-gold-bright)}
+
+/* ---------- bottom-middle: Daily Reminder (rotating ayah) ---------- */
+.rcard{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;
+  text-align:center;gap:var(--s1);min-height:0;overflow:hidden}   /* clip, never bleed into the title above */
+.rcard .kicker{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.2em;
+  text-transform:uppercase;color:var(--color-gold);flex:0 0 auto}
+.rcard .arabic{font-family:var(--font-arabic);direction:rtl;unicode-bidi:isolate;
+  color:var(--color-gold);font-size:var(--text-verse-ar);line-height:1.5}
+.rcard .body{font-family:var(--font-serif);font-size:var(--text-verse-en);line-height:1.3;color:var(--color-foreground)}
+.rcard .ref{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-gold-bright);font-style:italic}
+
+/* ---------- bottom-right: Contact Information ---------- */
+.contact-list{display:flex;flex-direction:column;gap:var(--s2);flex:0 0 auto}
+.crow{display:flex;flex-direction:column;gap:2px}
+.crow-role{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.12em;
+  text-transform:uppercase;color:var(--color-gold)}
+.crow-value{font-family:var(--font-serif);font-size:var(--text-md);color:var(--color-foreground)}
+.wa-block{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s2);padding-top:var(--s2);
+  border-top:1px solid var(--color-border);flex:0 0 auto}
+.qr-placeholder{flex:0 0 auto;width:8vh;height:8vh;border:1px solid var(--color-border);
+  border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:var(--color-gold)}
+.qr-icon{width:60%;height:60%}
+.wa-text{flex:1 1 auto}

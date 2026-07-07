@@ -1,1 +1,42 @@
-404: Not Found
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Masjid Daar Us Sunnah</title>
+  <link rel="icon" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- fonts per design-system/DESIGN.md -->
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&family=Amiri+Quran&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage">
+    <header id="topbar">
+      <div id="brand">
+        <img src="/logo.png" alt="Masjid Daar Us Sunnah">
+        <div id="brand-text">Masjid Daar us Sunnah <span class="sep">·</span> Community Board</div>
+      </div>
+      <div id="dateblock">
+        <div id="date-line">
+          <span id="date-en">&nbsp;</span>
+          <span class="sep">·</span>
+          <span id="time-en">&nbsp;</span>
+        </div>
+        <div id="date-ar" dir="rtl" lang="ar">&nbsp;</div>
+      </div>
+    </header>
+
+    <main id="board">
+      <section id="panel-ring"     class="panel"></section>
+      <section id="panel-events"   class="panel"></section>
+      <section id="panel-prayers"  class="panel"></section>
+      <section id="panel-reminder" class="panel"></section>
+      <section id="panel-contact"  class="panel"></section>
+    </main>
+  </div>
+
+  <script type="module" src="kiosk.js"></script>
+</body>
+</html>
