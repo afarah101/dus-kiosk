@@ -200,10 +200,12 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
   text-transform:uppercase;color:var(--color-gold);flex:0 0 auto}
 /* Arabic + body are both hard-capped by line count, never by available space —
    this guarantees the ref line below always has room, instead of competing for
-   whatever's left. Amiri Quran's diacritics sit above/below the glyph baseline,
-   so line-height is generous to keep them clear of the divider and body text. */
+   whatever's left. Amiri Quran's diacritics sit above/below the glyph baseline
+   and visibly overshoot the measured line-box, so margin-bottom adds a real
+   buffer there specifically (on top of the shared .rcard gap) — a flex gap
+   alone reads as touching once diacritic ink is accounted for. */
 .rcard .arabic{font-family:var(--font-arabic);direction:rtl;unicode-bidi:isolate;
-  color:var(--color-gold);font-size:var(--text-verse-ar);line-height:1.65;
+  color:var(--color-gold);font-size:var(--text-verse-ar);line-height:1.65;margin-bottom:0.3vh;
   flex:0 0 auto;max-width:92%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 .rcard .divider{flex:0 0 auto;width:15%;min-width:48px;max-width:120px;height:1px;
   background:linear-gradient(90deg,transparent,var(--color-border),transparent)}
