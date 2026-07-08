@@ -336,18 +336,26 @@ function renderPrayersPanel(){
   if(!state.prayer.data) return;
   const sched=computeSchedule();
   const list=el('div','prayer-list');
+
+  // Header labels the 3 grid columns once instead of repeating "Jamā'ah" on
+  // every row — same grid-template-columns as .prow so it lines up exactly.
+  const header=el('div','prow prow-header');
+  header.append(el('div','prow-name',''));
+  header.append(el('div','prow-col-label','BEGINS'));
+  header.append(el('div','prow-col-label','JAMĀ\'AH'));
+  list.append(header);
+
   sched.rows.forEach(r=>{
     const row=el('div','prow');
     const isNext = sched.next && r.id===sched.next.id && !sched.rollover;
     if(isNext) row.classList.add('next');
     else if(r.at && r.at.getTime()<sched.now && r.id!=='jumuah') row.classList.add('passed');
-    const left=el('div','prow-left');
-    left.append(ar('prow-ar', r.ar));
-    left.append(el('div','prow-en', r.label));
-    const right=el('div','prow-right');
-    right.append(el('span','prow-time', r.begin?fmt12(r.begin):'—'));
-    if(r.iqama) right.append(el('span','prow-iqama', ` · Jamā'ah ${fmt12(r.iqama)}`));
-    row.append(left,right);
+    const name=el('div','prow-name');
+    name.append(ar('prow-ar', r.ar));
+    name.append(el('div','prow-en', r.label));
+    row.append(name);
+    row.append(el('div','prow-time', r.begin?fmt12(r.begin):'—'));
+    row.append(el('div','prow-jamaah', r.iqama?fmt12(r.iqama):''));
     list.append(row);
   });
   panel.append(list);
