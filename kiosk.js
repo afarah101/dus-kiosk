@@ -42,24 +42,27 @@ const CONTACT = {
 // ---- HARDCODED verses (Muhsin Khan English). Arabic on top, translation below. ----
 // Daily rotation Sun–Thu/Sat; Friday auto-trigger swaps to the Jumuʿah set.
 const VERSES_DAILY = [
-  { ref:"Sūrah An-Nisā' [4:103]",
+  { kicker:"The Noble Qur’an", ref:"Sūrah An-Nisā' [4:103]",
     ar:"فَإِذَا قَضَيْتُمُ ٱلصَّلَوٰةَ فَٱذْكُرُوا۟ ٱللَّهَ قِيَـٰمًۭا وَقُعُودًۭا وَعَلَىٰ جُنُوبِكُمْ ۚ فَإِذَا ٱطْمَأْنَنتُمْ فَأَقِيمُوا۟ ٱلصَّلَوٰةَ ۚ إِنَّ ٱلصَّلَوٰةَ كَانَتْ عَلَى ٱلْمُؤْمِنِينَ كِتَـٰبًۭا مَّوْقُوتًۭا",
     en:"When you have finished the Salat (prayer), remember Allah standing, sitting down, and lying down on your sides, but when you are free from danger, perform the Salat. Verily, the prayer is enjoined on the believers at fixed hours." },
-  { ref:"Sūrah Al-Baqarah [2:153]",
+  { kicker:"The Noble Qur’an", ref:"Sūrah Al-Baqarah [2:153]",
     ar:"يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا۟ ٱسْتَعِينُوا۟ بِٱلصَّبْرِ وَٱلصَّلَوٰةِ ۚ إِنَّ ٱللَّهَ مَعَ ٱلصَّـٰبِرِينَ",
     en:"O you who believe! Seek help in patience and the Salat (prayer). Truly, Allah is with the patient (As-Sabirin)." },
-  { ref:"Sūrah Ar-Ra'd [13:28]",
+  { kicker:"The Noble Qur’an", ref:"Sūrah Ar-Ra'd [13:28]",
     ar:"ٱلَّذِينَ ءَامَنُوا۟ وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ ٱللَّهِ ۗ أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ",
     en:"Those who believe, and whose hearts find rest in the remembrance of Allah. Verily, in the remembrance of Allah do hearts find rest." },
-  { ref:"Sūrah Al-'Ankabūt [29:45]",
+  { kicker:"The Noble Qur’an", ref:"Sūrah Al-'Ankabūt [29:45]",
     ar:"ٱتْلُ مَآ أُوحِىَ إِلَيْكَ مِنَ ٱلْكِتَـٰبِ وَأَقِمِ ٱلصَّلَوٰةَ ۖ إِنَّ ٱلصَّلَوٰةَ تَنْهَىٰ عَنِ ٱلْفَحْشَآءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ ۗ وَٱللَّهُ يَعْلَمُ مَا تَصْنَعُونَ",
     en:"Recite what has been revealed to you of the Book, and perform the Salat. Verily, the Salat prevents from Al-Fahsha (great sins) and Al-Munkar (evil deeds), and the remembering of Allah is greater. And Allah knows what you do." },
+  { kicker:"Hadith", ref:"Ṣaḥīḥ Muslim 713",
+    ar:"إِذَا دَخَلَ أَحَدُكُمُ الْمَسْجِدَ فَلْيُسَلِّمْ عَلَى النَّبِيِّ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ ثُمَّ لْيَقُلِ اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ فَإِذَا خَرَجَ فَلْيُسَلِّمْ عَلَى النَّبِيِّ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ ثُمَّ لْيَقُلِ اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
+    en:"When one of you enters the mosque, let him say: O Allah, open for me the doors of your mercy. When he leaves, let him say: O Allah, I ask you for your favor." },
 ];
 const VERSES_FRIDAY = [
-  { ref:"Sūrah Al-Jumuʿah [62:9]",
+  { kicker:"The Noble Qur’an", ref:"Sūrah Al-Jumuʿah [62:9]",
     ar:"يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓا۟ إِذَا نُودِىَ لِلصَّلَوٰةِ مِن يَوْمِ ٱلْجُمُعَةِ فَٱسْعَوْا۟ إِلَىٰ ذِكْرِ ٱللَّهِ وَذَرُوا۟ ٱلْبَيْعَ ۚ ذَٰلِكُمْ خَيْرٌۭ لَّكُمْ إِن كُنتُمْ تَعْلَمُونَ",
     en:"O you who believe! When the call is proclaimed for the Salat (prayer) on Friday (Jumuʿah), come to the remembrance of Allah and leave off business. That is better for you if you did but know!" },
-  { ref:"Sūrah Al-Aḥzāb [33:56]",
+  { kicker:"The Noble Qur’an", ref:"Sūrah Al-Aḥzāb [33:56]",
     ar:"إِنَّ ٱللَّهَ وَمَلَـٰٓئِكَتَهُۥ يُصَلُّونَ عَلَى ٱلنَّبِىِّ ۚ يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا۟ صَلُّوا۟ عَلَيْهِ وَسَلِّمُوا۟ تَسْلِيمًا",
     en:"Allah sends His Salat (Graces, Honours, Blessings, Mercy) on the Prophet (Muhammad), and also His angels. O you who believe! Send your Salat on him, and greet him with the Islamic greeting." },
 ];
@@ -392,7 +395,7 @@ function renderReminderPanel(){
   const set=versesForToday();
   const v=set[verseIndex % set.length];
   const card=el('div','rcard');
-  card.append(el('div','kicker','The Noble Qur’an'));
+  card.append(el('div','kicker', v.kicker));
   card.append(ar('arabic', v.ar));
   card.append(el('div','divider'));
   card.append(el('div','body', '“'+v.en+'”'));
