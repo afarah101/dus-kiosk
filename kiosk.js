@@ -1,11 +1,12 @@
 // Masjid Daar Us Sunnah — entrance signage TV controller.
 // Static 6-panel community board (topbar + Next Prayer ring, Upcoming Events,
 // Prayer Times list, Daily Reminder, Contact Information). No slide rotation.
-// Live from Firestore: prayerTimes, oneOffEvents. Verses are HARDCODED — see VERSES below.
+// Live from Firestore: prayerTimes, oneOffEvents, lessons. Verses are HARDCODED — see VERSES below.
 //
 // Firestore structure (path logged on read):
 //   prayerTimes/{YYYY-MM}   -> { entries:[ {_dayNum, d, f,fj, s, z,zj, a,aj, m, i,ij}, ... ] }
 //   oneOffEvents/{id}       -> {title,speaker,location,description?,time,date,isoDate,poster}
+//   lessons/{id}            -> {day,title,time,desc,teacher|speaker,cancelled,cancelledThisWeek}
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { getFirestore, doc, getDoc, collection, getDocs }
   from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
@@ -14,8 +15,9 @@ const LOG = '[kiosk]';
 const REMINDER_ROTATE_MS = 15000;   // Daily Reminder panel now advances on its own timer (was slide-driven)
 
 const state = {
-  prayer: { data:null, error:null, path:null, sunrise:null },
-  events: { list:[], error:null, path:'oneOffEvents' },
+  prayer:  { data:null, error:null, path:null, sunrise:null },
+  events:  { list:[], error:null, path:'oneOffEvents' },
+  lessons: { list:[], error:null, path:'lessons' },
 };
 
 // ---- Contact info: static placeholder, no Firestore collection backs this. ----
@@ -63,6 +65,15 @@ const pad = n => String(n).padStart(2,'0');
 
 // ---- date / time helpers ---------------------------------------------------
 function monthKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+// next calendar date (today or later) matching a weekday name, e.g. "Tuesday"
+function nextOccurrence(dayName, fromDate=new Date()){
+  const idx = DAYS.findIndex(d=>d.toLowerCase()===String(dayName||'').trim().toLowerCase());
+  if(idx<0) return null;
+  const d=new Date(fromDate); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + ((idx - d.getDay() + 7) % 7));
+  return d;
+}
 
 function englishDate(d){ return d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
 function hijriDate(d){
@@ -161,13 +172,48 @@ async function loadEvents(db){
     console.error(`${LOG} events read failed -> reason=${reasonFor(e)} path=oneOffEvents`, e);
   }
 }
-function upcomingEvents(){
+async function loadLessons(db){
+  console.info(`${LOG} reading collection:`, 'lessons');
+  try{
+    const snap=await getDocs(collection(db,'lessons'));
+    state.lessons.list=snap.docs.map(d=>({id:d.id,...d.data()}))
+      .filter(l=>pick(l,['day']) && pick(l,['title']) && l.cancelled!==true);
+    if(!state.lessons.list.length){ state.lessons.error='no-doc-for-today'; console.error(`${LOG} lessons empty -> reason=no-doc-for-today path=lessons`); }
+    else console.info(`${LOG} lessons loaded (${state.lessons.list.length})`);
+  }catch(e){
+    state.lessons.error=reasonFor(e);
+    console.error(`${LOG} lessons read failed -> reason=${reasonFor(e)} path=lessons`, e);
+  }
+}
+
+// Combine one-off events + recurring weekly lessons into one chronologically sorted list.
+// Lessons are projected onto their next real calendar occurrence; a lesson cancelled this
+// week rolls to the following week rather than showing a date it won't actually happen.
+function combinedSchedule(){
   const todayStr=new Date().toISOString().slice(0,10);
-  return state.events.list
-    .map(ev=>({ev, iso:pick(ev,['isoDate']), dt:toDate(pick(ev,['isoDate','date','datetime','start']))}))
-    .filter(x=>!x.iso || x.iso>=todayStr)
-    .sort((a,b)=>String(a.iso||'').localeCompare(String(b.iso||'')))
-    .slice(0,4);
+  const events=state.events.list.map(ev=>({
+    date: toDate(pick(ev,['isoDate','date','datetime','start'])),
+    iso:  pick(ev,['isoDate']),
+    title: String(pick(ev,['title','name'])||'Event'),
+    desc: pick(ev,['description','desc','details','info']),
+    time: pick(ev,['time']),
+    sub: [pick(ev,['speaker','by']), pick(ev,['location','venue'])].filter(Boolean).join('  ·  '),
+  })).filter(x=>x.date && (!x.iso || x.iso>=todayStr));
+
+  const lessons=state.lessons.list.map(les=>{
+    let date=nextOccurrence(pick(les,['day','weekday']));
+    if(!date) return null;
+    if(les.cancelledThisWeek===true) date=new Date(date.getTime()+7*864e5);
+    return {
+      date,
+      title: String(pick(les,['title','name'])||'Lesson'),
+      desc: pick(les,['desc','description']),
+      time: pick(les,['time','start']),
+      sub: pick(les,['teacher','speaker','instructor']) ? String(pick(les,['teacher','speaker','instructor'])) : '',
+    };
+  }).filter(Boolean);
+
+  return [...events,...lessons].sort((a,b)=>a.date-b.date || String(a.time||'').localeCompare(String(b.time||'')));
 }
 
 // ============================================================================
@@ -298,25 +344,24 @@ function renderPrayersPanel(){
 function renderEventsPanel(){
   const panel=$('#panel-events'); panel.innerHTML='';
   panel.append(panelTitle('Upcoming Events'));
-  const items=upcomingEvents();
+  const items=combinedSchedule().slice(0,7);   // cap so a fixed-height TV panel never scrolls
   if(!items.length) return;   // never render "no events" text — just the title
   const wrap=el('div','events-list');
-  items.forEach(({ev,dt})=>{
+  let lastKey=null;
+  items.forEach(item=>{
+    const key=item.date.toISOString().slice(0,10);
+    if(key!==lastKey){
+      wrap.append(el('div','day-head', item.date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})));
+      lastKey=key;
+    }
     const c=el('div','ecard');
-    const dd=el('div','edate');
-    dd.append(el('div','ed', dt?String(dt.getDate()):'•'));
-    dd.append(el('div','em', dt?dt.toLocaleDateString('en-GB',{month:'short'}):''));
-    c.append(dd);
-    const info=el('div','einfo');
-    info.append(el('div','en', String(pick(ev,['title','name'])||'Event')));
-    const desc=pick(ev,['description','desc','details','info']);
-    if(desc) info.append(el('div','edesc', String(desc)));
-    const tm=pick(ev,['time']), loc=pick(ev,['location','venue']), who=pick(ev,['speaker','by']);
+    c.append(el('div','en', item.title));
+    if(item.desc) c.append(el('div','edesc', String(item.desc)));
     const line=el('div','ex');
-    if(tm) line.append(el('span','etime',String(tm)+'  '));
-    line.append(document.createTextNode([who,loc].filter(Boolean).join('  ·  ')));
-    info.append(line);
-    c.append(info); wrap.append(c);
+    if(item.time) line.append(el('span','etime', String(item.time)+'  '));
+    if(item.sub) line.append(document.createTextNode(item.sub));
+    c.append(line);
+    wrap.append(c);
   });
   panel.append(wrap);
 }
@@ -411,7 +456,7 @@ async function boot(){
     const app=initializeApp({apiKey:cfg.apiKey, projectId:cfg.projectId, authDomain:`${cfg.projectId}.firebaseapp.com`});
     db=getFirestore(app);
     console.info(`${LOG} firebase initialised for project`, cfg.projectId);
-    await Promise.allSettled([loadPrayer(db), loadEvents(db)]);
+    await Promise.allSettled([loadPrayer(db), loadEvents(db), loadLessons(db)]);
   }catch(e){
     const reason=e.code||e.detail||e.message||'config-missing';
     console.error(`${LOG} config/init failed -> reason=config-missing detail=${reason}`);
