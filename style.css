@@ -161,10 +161,16 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 .prow-col-label{font-family:var(--font-sans);font-size:var(--text-badge);letter-spacing:.1em;
   text-transform:uppercase;color:var(--color-muted);text-align:right}
 .prow-name{display:flex;align-items:baseline;gap:var(--s2)}
-.prow-ar{font-family:var(--font-arabic);font-size:var(--text-sm);color:var(--color-muted);direction:rtl}
+/* Explicit line-height everywhere in a .prow: the default "normal" line-height
+   (~1.3x font-size for DM Sans) is taller than the row's own content-box at
+   this row height, so unset it overflowed the row and bled into whichever
+   row sits below — most visible when that row carried the .next highlight,
+   which made an unrelated row's own overflow look like the highlight box
+   itself was misplaced. */
+.prow-ar{font-family:var(--font-arabic);font-size:var(--text-sm);color:var(--color-muted);direction:rtl;line-height:1}
 .prow-en{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);
-  text-transform:uppercase;letter-spacing:.06em}
-.prow-time,.prow-jamaah{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  text-transform:uppercase;letter-spacing:.06em;line-height:1}
+.prow-time,.prow-jamaah{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;line-height:1}
 .prow-time{font-family:var(--font-sans);font-size:var(--text-row-time);color:var(--color-foreground);font-weight:500}
 .prow-jamaah{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted)}
 .prow.passed{opacity:.72}   /* keeps passed prayers legible on TV (a11y contrast) */
