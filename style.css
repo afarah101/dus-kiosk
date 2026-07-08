@@ -24,7 +24,7 @@
   --text-panel-title:2.5vh;
   --text-ring-name:2.6vh; --text-ring-time:5.4vh;
   --text-verse-ar:1.85vh; --text-verse-en:1.4vh;
-  --text-row-time:2.8vh;
+  --text-row-time:2.6vh;
   /* ---- spacing: strict 8pt grid (unchanged) ---- */
   --s-half:4px; --s1:8px; --s2:16px; --s3:24px; --s4:32px;
   --s5:40px; --s6:48px; --s8:64px; --s10:80px;
@@ -117,14 +117,17 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 
 /* ---------- bottom-left: Prayer Times list (6 rows) ---------- */
 .prayer-list{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+/* min-height:0 on the row itself is required — without it flexbox floors
+   flex-shrink at the row's natural content height, so 6 rows never actually
+   compress to fit and the last one or two (Isha, Jumu'ah) silently clip. */
 .prow{display:flex;align-items:center;justify-content:space-between;padding:var(--s1) var(--s2);
-  border-bottom:1px solid var(--color-border);flex:1 1 0}
+  border-bottom:1px solid var(--color-border);flex:1 1 0;min-height:0}
 .prow:last-child{border-bottom:none}
 .prow-left{display:flex;align-items:baseline;gap:var(--s2)}
-.prow-ar{font-family:var(--font-arabic);font-size:var(--text-md);color:var(--color-muted);direction:rtl}
-.prow-en{font-family:var(--font-sans);font-size:var(--text-sm);color:var(--color-muted);
+.prow-ar{font-family:var(--font-arabic);font-size:var(--text-sm);color:var(--color-muted);direction:rtl}
+.prow-en{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);
   text-transform:uppercase;letter-spacing:.06em}
-.prow-right{text-align:right}
+.prow-right{text-align:right;white-space:nowrap}
 .prow-time{font-family:var(--font-sans);font-size:var(--text-row-time);color:var(--color-foreground);
   font-variant-numeric:tabular-nums;font-weight:500}
 .prow-iqama{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted)}

@@ -332,8 +332,8 @@ function renderPrayersPanel(){
     left.append(ar('prow-ar', r.ar));
     left.append(el('div','prow-en', r.label));
     const right=el('div','prow-right');
-    right.append(el('div','prow-time', r.begin?fmt12(r.begin):'—'));
-    if(r.iqama) right.append(el('div','prow-iqama', `Jamā'ah ${fmt12(r.iqama)}`));
+    right.append(el('span','prow-time', r.begin?fmt12(r.begin):'—'));
+    if(r.iqama) right.append(el('span','prow-iqama', ` · Jamā'ah ${fmt12(r.iqama)}`));
     row.append(left,right);
     list.append(row);
   });
