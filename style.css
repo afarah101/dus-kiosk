@@ -105,7 +105,14 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
   padding-bottom:var(--s2);margin-bottom:var(--s2);border-bottom:1px solid var(--color-border);flex:0 0 auto}
 
 /* ---------- left panel: Next Prayer ring ---------- */
-#panel-ring{align-items:center;text-align:center}
+/* Next Prayer is the one primary focal point on the board (80/20 hierarchy —
+   everything else here is secondary/tertiary reference info). A soft ambient
+   glow around the whole panel, on top of the shared card shadow every panel
+   gets, is what makes it read as "the" panel rather than one of five equals
+   even at a glance/squint, not just the ring shape itself. */
+#panel-ring{align-items:center;text-align:center;
+  border-color:var(--color-gold);
+  box-shadow:var(--shadow-card),0 0 64px -18px rgba(var(--color-gold-rgb),.45)}
 .ring-content{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:var(--s1);overflow:hidden}
 /* Ring interior deliberately holds just 2 lines (Arabic name + time). A circle's
