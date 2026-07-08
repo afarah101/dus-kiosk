@@ -373,6 +373,7 @@ function renderReminderPanel(){
   const card=el('div','rcard');
   card.append(el('div','kicker','The Noble Qur’an'));
   card.append(ar('arabic', v.ar));
+  card.append(el('div','divider'));
   card.append(el('div','body', '“'+v.en+'”'));
   card.append(el('div','ref', '— '+v.ref));
   panel.append(card);
