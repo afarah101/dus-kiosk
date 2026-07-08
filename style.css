@@ -45,7 +45,7 @@
   --text-badge:1.8vh; --text-xs:2vh; --text-sm:2.3vh; --text-md:2.6vh; --text-lg:3vh;
   --text-panel-title:2.7vh;
   --text-ring-name:2.7vh; --text-ring-time:4.8vh;
-  --text-verse-ar:2.5vh; --text-verse-en:1.95vh;
+  --text-verse-ar:2.45vh; --text-verse-en:1.9vh;
   --text-row-time:2.7vh;
   /* ---- spacing: strict 8pt grid (same in both themes) ---- */
   --s-half:4px; --s1:8px; --s2:16px; --s3:24px; --s4:32px;
@@ -174,8 +174,15 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    height the type scale scales with. Tuned for 1080p+ — 720p is no longer a
    supported target, so this trades the old ultra-tight margins for real
    visual presence while still holding zero overflow on all 6 verses. */
+/* This is the one piece of scripture on the board — it gets a distinct visual
+   identity (tinted panel + left accent bar) so it reads as categorically
+   different from the neutral, sans-serif informational panels around it
+   (prayer times, events, contact), per digital-signage message-hierarchy
+   guidance to separate content types visually, not just by position. */
 .rcard{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;
-  text-align:center;gap:0.5vh;min-height:0;overflow:hidden}
+  text-align:center;gap:0.4vh;min-height:0;overflow:hidden;
+  background:rgba(var(--color-gold-rgb),.07);border-left:3px solid var(--color-gold);
+  border-radius:var(--radius-md);padding:var(--s-half) var(--s2)}
 .rcard .kicker{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.2em;
   text-transform:uppercase;color:var(--color-gold);flex:0 0 auto}
 /* Arabic + body are both hard-capped by line count, never by available space —
