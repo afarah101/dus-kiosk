@@ -54,9 +54,12 @@ const VERSES_DAILY = [
   { kicker:"The Noble Qur’an", ref:"Sūrah Al-'Ankabūt [29:45]",
     ar:"ٱتْلُ مَآ أُوحِىَ إِلَيْكَ مِنَ ٱلْكِتَـٰبِ وَأَقِمِ ٱلصَّلَوٰةَ ۖ إِنَّ ٱلصَّلَوٰةَ تَنْهَىٰ عَنِ ٱلْفَحْشَآءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ ۗ وَٱللَّهُ يَعْلَمُ مَا تَصْنَعُونَ",
     en:"Recite what has been revealed to you of the Book, and perform the Salat. Verily, the Salat prevents from Al-Fahsha (great sins) and Al-Munkar (evil deeds), and the remembering of Allah is greater. And Allah knows what you do." },
-  { kicker:"Hadith", ref:"Ṣaḥīḥ Muslim 713",
-    ar:"إِذَا دَخَلَ أَحَدُكُمُ الْمَسْجِدَ فَلْيُسَلِّمْ عَلَى النَّبِيِّ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ ثُمَّ لْيَقُلِ اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ فَإِذَا خَرَجَ فَلْيُسَلِّمْ عَلَى النَّبِيِّ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ ثُمَّ لْيَقُلِ اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
-    en:"When one of you enters the mosque, let him say: O Allah, open for me the doors of your mercy. When he leaves, let him say: O Allah, I ask you for your favor." },
+  { kicker:"Du’ā · Entering the Mosque", ref:"Sahih Muslim 713",
+    ar:"اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
+    en:"O Allah, open for me the doors of Your mercy." },
+  { kicker:"Du’ā · Leaving the Mosque", ref:"Sahih Muslim 713",
+    ar:"اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
+    en:"O Allah, I ask You of Your favor." },
 ];
 const VERSES_FRIDAY = [
   { kicker:"The Noble Qur’an", ref:"Sūrah Al-Jumuʿah [62:9]",
@@ -199,19 +202,25 @@ async function loadLessons(db){
   }
 }
 
-// Combine one-off events + recurring weekly lessons into one chronologically sorted list.
+// Combine one-off events + recurring weekly lessons into one chronologically sorted list,
+// windowed to the next 7 days (today through today+7). Previously there was no upper
+// bound at all — any future date qualified indefinitely — so events window is now the
+// one deliberate scope limit; lessons were never bounded by date either since they only
+// ever carried a computed .date, not an .iso string, so this now applies uniformly to both
+// via the same Date-object comparison instead of two different, inconsistent checks.
 // Lessons are projected onto their next real calendar occurrence; a lesson cancelled this
 // week rolls to the following week rather than showing a date it won't actually happen.
 function combinedSchedule(){
-  const todayStr=new Date().toISOString().slice(0,10);
+  const now=new Date();
+  const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const weekEnd=new Date(todayStart.getTime()+7*864e5);
   const events=state.events.list.map(ev=>({
     date: toDate(pick(ev,['isoDate','date','datetime','start'])),
-    iso:  pick(ev,['isoDate']),
     title: String(pick(ev,['title','name'])||'Event'),
     desc: pick(ev,['description','desc','details','info']),
     time: pick(ev,['time']),
     sub: [pick(ev,['speaker','by']), pick(ev,['location','venue'])].filter(Boolean).join('  ·  '),
-  })).filter(x=>x.date && (!x.iso || x.iso>=todayStr));
+  })).filter(x=>x.date);
 
   const lessons=state.lessons.list.map(les=>{
     let date=nextOccurrence(pick(les,['day','weekday']));
@@ -226,7 +235,9 @@ function combinedSchedule(){
     };
   }).filter(Boolean);
 
-  return [...events,...lessons].sort((a,b)=>a.date-b.date || String(a.time||'').localeCompare(String(b.time||'')));
+  return [...events,...lessons]
+    .filter(x=>x.date>=todayStart && x.date<weekEnd)
+    .sort((a,b)=>a.date-b.date || String(a.time||'').localeCompare(String(b.time||'')));
 }
 
 // ============================================================================
@@ -364,10 +375,27 @@ function renderPrayersPanel(){
   panel.append(list);
 }
 
+// Caps items per day (not just a flat total) so a single busy day can't crowd the
+// rest of the week out of a fixed-height panel — combinedSchedule() already windows
+// to 7 days, so without a per-day cap the first 1-2 busy days could consume the whole
+// display budget and silently drop every later day in the week.
+function weekEventsForDisplay(perDayCap, totalCap){
+  const seenPerDay={};
+  const items=[];
+  for(const item of combinedSchedule()){
+    const key=item.date.toISOString().slice(0,10);
+    seenPerDay[key]=(seenPerDay[key]||0)+1;
+    if(seenPerDay[key]>perDayCap) continue;
+    items.push(item);
+    if(items.length>=totalCap) break;
+  }
+  return items;
+}
+
 function renderEventsPanel(){
   const panel=$('#panel-events'); panel.innerHTML='';
   panel.append(panelTitle('Upcoming Events'));
-  const items=combinedSchedule().slice(0,4);   // cap so a fixed-height TV panel never scrolls
+  const items=weekEventsForDisplay(1,3);   // cap so a fixed-height TV panel never scrolls
   if(!items.length) return;   // never render "no events" text — just the title
   const wrap=el('div','events-list');
   let lastKey=null;
