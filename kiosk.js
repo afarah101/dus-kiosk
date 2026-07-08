@@ -78,6 +78,11 @@ const el = (tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.classNam
 // Arabic element: isolated RTL so Quranic marks & bidi never leak into layout
 const ar = (cls,txt)=>{const e=el('span',cls,txt);e.setAttribute('dir','rtl');e.setAttribute('lang','ar');e.style.unicodeBidi='isolate';return e;};
 const pad = n => String(n).padStart(2,'0');
+// Local calendar-day key (YYYY-MM-DD). NOT date.toISOString().slice(0,10) — that
+// converts to UTC first, so in any UTC+ timezone (this runs in Europe/London,
+// BST=UTC+1 in summer) a local midnight can shift into the *previous* UTC day,
+// silently merging e.g. Saturday's events into Friday's day-bucket.
+const localDateKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 
 // ---- date / time helpers ---------------------------------------------------
 function monthKey(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
@@ -377,17 +382,39 @@ function renderPrayersPanel(){
 
 // Caps items per day (not just a flat total) so a single busy day can't crowd the
 // rest of the week out of a fixed-height panel — combinedSchedule() already windows
-// to 7 days, so without a per-day cap the first 1-2 busy days could consume the whole
-// display budget and silently drop every later day in the week.
-function weekEventsForDisplay(perDayCap, totalCap){
-  const seenPerDay={};
+// to 7 days. Real capacity only fits ~3 distinct days at 1080p (measured: 4 distinct
+// days overflows by 60-70px with real content, and style.css is out of scope here),
+// so with 4+ relevant days in a typical week something has to be left out. Rather than
+// always taking the chronologically-first days (which silently drops the weekend if
+// enough near-term weekdays are busy — the exact bug reported), today + the upcoming
+// Saturday/Sunday are prioritized first, since a parent checking this board on any
+// weekday still needs to see what's on this weekend; remaining slots fill with the
+// nearest other weekdays.
+function weekEventsForDisplay(perDayCap, totalDaysCap){
+  const all=combinedSchedule();   // already 7-day windowed & chronologically sorted
+  const byDay=new Map();
+  for(const item of all){
+    const key=localDateKey(item.date);
+    if(!byDay.has(key)) byDay.set(key,[]);
+    byDay.get(key).push(item);
+  }
+  const dayKeys=[...byDay.keys()];   // chronological, since `all` is sorted
+  const weekendKeys=dayKeys.filter(k=>{
+    const [y,m,d]=k.split('-').map(Number);
+    const day=new Date(y,m-1,d).getDay();
+    return day===0 || day===6;   // Sunday=0, Saturday=6
+  });
+  const todayKey=localDateKey(new Date());
+  const selected=[];
+  if(dayKeys.includes(todayKey)) selected.push(todayKey);
+  for(const k of weekendKeys) if(!selected.includes(k)) selected.push(k);
+  for(const k of dayKeys) if(!selected.includes(k) && selected.length<totalDaysCap) selected.push(k);
+  const selectedSet=new Set(selected.slice(0,totalDaysCap));
+
   const items=[];
-  for(const item of combinedSchedule()){
-    const key=item.date.toISOString().slice(0,10);
-    seenPerDay[key]=(seenPerDay[key]||0)+1;
-    if(seenPerDay[key]>perDayCap) continue;
-    items.push(item);
-    if(items.length>=totalCap) break;
+  for(const key of dayKeys){   // chronological order, not priority order
+    if(!selectedSet.has(key)) continue;
+    items.push(...byDay.get(key).slice(0,perDayCap));
   }
   return items;
 }
@@ -400,7 +427,7 @@ function renderEventsPanel(){
   const wrap=el('div','events-list');
   let lastKey=null;
   items.forEach(item=>{
-    const key=item.date.toISOString().slice(0,10);
+    const key=localDateKey(item.date);
     if(key!==lastKey){
       wrap.append(el('div','day-head', item.date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})));
       lastKey=key;
