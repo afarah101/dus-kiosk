@@ -22,7 +22,7 @@
   /* ---- type scale — resized for quadrant panels (was full-screen slides) ---- */
   --text-badge:1.6vh; --text-xs:1.8vh; --text-sm:2.1vh; --text-md:2.4vh; --text-lg:2.8vh;
   --text-panel-title:2.5vh;
-  --text-ring-name:2.6vh; --text-ring-time:5.4vh;
+  --text-ring-name:1.9vh; --text-ring-time:3.3vh;
   --text-verse-ar:1.85vh; --text-verse-en:1.4vh;
   --text-row-time:2.6vh;
   /* ---- spacing: strict 8pt grid (unchanged) ---- */
@@ -86,23 +86,26 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 /* ---------- left panel: Next Prayer ring ---------- */
 #panel-ring{align-items:center;text-align:center}
 .ring-content{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:var(--s3);overflow:hidden}
-.ring-wrap{position:relative;width:min(26vh,20vw);aspect-ratio:1/1;flex:0 0 auto}
+  align-items:center;justify-content:center;gap:var(--s-half);overflow:hidden}
+/* Ring interior deliberately holds just 2 lines (Arabic name + time). A circle's
+   usable width shrinks away from its vertical center, so anything past 2 short
+   lines reliably breaks out of the stroke no matter how small the font — the
+   "NEXT" label lives outside the circle instead, and the English name is
+   dropped (Prayer Times panel already shows it). */
+.ring-wrap{position:relative;width:min(19vh,18vw);aspect-ratio:1/1;flex:0 0 auto}
 .ring-svg{width:100%;height:100%;transform:rotate(-90deg)}
 .ring-track{fill:none;stroke:var(--color-border);stroke-width:10}
 .ring-progress{fill:none;stroke:var(--color-gold);stroke-width:10;stroke-linecap:round}
 .ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:var(--s-half)}
+  justify-content:center;gap:var(--s-half);padding:0 14%}
 #ring-label{font-family:var(--font-sans);font-size:var(--text-badge);letter-spacing:.3em;
-  text-transform:uppercase;color:var(--color-muted)}
+  text-transform:uppercase;color:var(--color-muted);flex:0 0 auto}
 .ring-name-ar{font-family:var(--font-arabic);font-size:var(--text-ring-name);color:var(--color-gold);direction:rtl}
-#ring-name-en{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);
-  text-transform:uppercase;letter-spacing:.1em}
 #ring-time{font-family:var(--font-sans);font-size:var(--text-ring-time);color:var(--color-gold);
-  font-variant-numeric:tabular-nums;font-weight:500}
-#jamaa-trigger{font-family:var(--font-sans);font-size:var(--text-sm);letter-spacing:.1em;
+  font-variant-numeric:tabular-nums;font-weight:500;white-space:nowrap}
+#jamaa-trigger{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.1em;
   text-transform:uppercase;color:var(--color-on-gold);background:var(--color-gold);
-  padding:var(--s1) var(--s3);border-radius:var(--radius-pill);font-weight:700;box-shadow:var(--glow-gold)}
+  padding:var(--s-half) var(--s3);border-radius:var(--radius-pill);font-weight:700;box-shadow:var(--glow-gold);flex:0 0 auto}
 
 /* ---------- right panel: Upcoming Events (merged one-off events + weekly lessons) ---------- */
 .events-list{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:var(--s-half)}

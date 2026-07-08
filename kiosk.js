@@ -266,6 +266,8 @@ function renderRingPanel(){
   panel.append(panelTitle('Next Prayer'));
   if(!state.prayer.data) return;
 
+  const label=el('div',null,'NEXT'); label.id='ring-label';
+
   const wrap=el('div','ring-wrap');
   const svgNS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(svgNS,'svg');
@@ -279,19 +281,20 @@ function renderRingPanel(){
   prog.style.strokeDasharray=String(RING_C);
   svg.append(track,prog);
 
+  // Ring interior holds only Arabic name + time — a circle's usable width shrinks
+  // away from its vertical center, so stacking more lines here (English name, a
+  // label) reliably breaks out of the circle no matter how small the font.
   const inner=el('div','ring-inner');
-  const label=el('div',null,'NEXT'); label.id='ring-label';
   const nameAr=ar('ring-name-ar',''); nameAr.id='ring-name-ar';
-  const nameEn=el('div',null,''); nameEn.id='ring-name-en';
   const time=el('div',null,'--:--:--'); time.id='ring-time';
-  inner.append(label,nameAr,nameEn,time);
+  inner.append(nameAr,time);
 
   wrap.append(svg,inner);
 
   const trg=el('div',null,''); trg.id='jamaa-trigger';
 
   const content=el('div','ring-content');
-  content.append(wrap,trg);
+  content.append(label,wrap,trg);
   panel.append(content);
 
   tickRing();
@@ -300,12 +303,11 @@ function renderRingPanel(){
 function tickRing(){
   const ringTime=$('#ring-time'); if(!ringTime) return;   // ring not rendered (no prayer data)
   const sched=computeSchedule();
-  const label=$('#ring-label'), nameAr=$('#ring-name-ar'), nameEn=$('#ring-name-en');
+  const label=$('#ring-label'), nameAr=$('#ring-name-ar');
   const prog=$('#ring-progress'), trg=$('#jamaa-trigger');
   if(!sched.next){ ringTime.textContent='--:--:--'; return; }
   label.textContent = sched.rollover ? 'FIRST PRAYER' : 'NEXT';
   nameAr.textContent = sched.next.ar;
-  nameEn.textContent = sched.next.label;
   const diff=Math.max(0,Math.floor((sched.next.at.getTime()-Date.now())/1000));
   const h=Math.floor(diff/3600), m=Math.floor(diff%3600/60), s=diff%60;
   ringTime.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
