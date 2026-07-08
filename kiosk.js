@@ -343,7 +343,7 @@ function renderPrayersPanel(){
 function renderEventsPanel(){
   const panel=$('#panel-events'); panel.innerHTML='';
   panel.append(panelTitle('Upcoming Events'));
-  const items=combinedSchedule().slice(0,7);   // cap so a fixed-height TV panel never scrolls
+  const items=combinedSchedule().slice(0,4);   // cap so a fixed-height TV panel never scrolls
   if(!items.length) return;   // never render "no events" text — just the title
   const wrap=el('div','events-list');
   let lastKey=null;
@@ -355,7 +355,6 @@ function renderEventsPanel(){
     }
     const c=el('div','ecard');
     c.append(el('div','en', item.title));
-    if(item.desc) c.append(el('div','edesc', String(item.desc)));
     const line=el('div','ex');
     if(item.time) line.append(el('span','etime', String(item.time)+'  '));
     if(item.sub) line.append(document.createTextNode(item.sub));
