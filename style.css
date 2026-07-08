@@ -1,10 +1,11 @@
 /* Masjid Daar Us Sunnah — entrance signage TV, static 6-panel community board.
-   Palette/fonts unchanged from the prior slide-deck build (charcoal + gold,
-   Cormorant Garamond / DM Sans / Amiri Quran) — re-theme is a separate phase.
-   Layout + type scale rebuilt for fixed quadrant panels instead of full-screen
-   slides. Strict 8pt spacing grid. No animation. */
-:root{
-  /* ---- colour (unchanged — charcoal + logo gold) ---- */
+   Two themes share one structure/layout, swapped only via the colour tokens
+   below: dark (charcoal + gold, default) and light (DUS App v5 terracotta +
+   cream, [data-theme="light"]). Layout + type scale rebuilt for fixed
+   quadrant panels instead of full-screen slides. Strict 8pt spacing grid.
+   No animation. */
+:root, [data-theme="dark"]{
+  /* ---- colour: dark theme (charcoal + gold) ---- */
   --color-background:#2E2E2E;
   --color-surface:#383838;
   --color-surface-2:#424242;
@@ -12,10 +13,31 @@
   --color-foreground:#F5F3EE;
   --color-muted:#A8A29A;
   --color-gold:#B98D4E;
+  --color-gold-rgb:185,141,78;      /* same as --color-gold, as an r,g,b triplet for rgba() */
   --color-gold-bright:#DBB768;
   --color-gold-deep:#8A6A3A;
   --color-on-gold:#2E2E2E;
-  /* ---- typography (unchanged fonts) ---- */
+  --body-bg:radial-gradient(120% 120% at 50% 0%,#343434 0%,#2E2E2E 55%,#262626 100%);
+  --shadow-card:0 8px 24px rgba(0,0,0,.35);
+}
+[data-theme="light"]{
+  /* ---- colour: light theme (DUS App v5 terracotta + cream tokens) ---- */
+  --color-background:#F7F3EE;
+  --color-surface:#FFFFFF;
+  --color-surface-2:#F1E8DB;
+  --color-border:#E4D8C6;
+  --color-foreground:#1C1208;
+  --color-muted:#8A7862;
+  --color-gold:#A8501A;
+  --color-gold-rgb:168,80,26;
+  --color-gold-bright:#C36A34;
+  --color-gold-deep:#7A3812;
+  --color-on-gold:#FFFFFF;
+  --body-bg:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#F7F3EE 55%,#F0E7D8 100%);
+  --shadow-card:0 8px 24px rgba(28,18,8,.10);
+}
+:root{
+  /* ---- typography (same in both themes) ---- */
   --font-serif:"Cormorant Garamond","Georgia",serif;
   --font-sans:"DM Sans",-apple-system,"Segoe UI",Arial,sans-serif;
   --font-arabic:"Amiri Quran","Amiri","Geeza Pro","Noto Naskh Arabic",serif;
@@ -25,19 +47,18 @@
   --text-ring-name:1.9vh; --text-ring-time:3.3vh;
   --text-verse-ar:1.85vh; --text-verse-en:1.4vh;
   --text-row-time:2.6vh;
-  /* ---- spacing: strict 8pt grid (unchanged) ---- */
+  /* ---- spacing: strict 8pt grid (same in both themes) ---- */
   --s-half:4px; --s1:8px; --s2:16px; --s3:24px; --s4:32px;
   --s5:40px; --s6:48px; --s8:64px; --s10:80px;
-  /* ---- radius / elevation (unchanged) ---- */
+  /* ---- radius / elevation (radius same in both themes; shadow/glow are per-theme above) ---- */
   --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
-  --shadow-card:0 8px 24px rgba(0,0,0,.35);
-  --glow-gold:0 16px 48px -16px rgba(185,141,78,.55);
+  --glow-gold:0 16px 48px -16px rgba(var(--color-gold-rgb),.55);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;width:100%;overflow:hidden}
 body{
-  background:radial-gradient(120% 120% at 50% 0%,#343434 0%,var(--color-background) 55%,#262626 100%);
+  background:var(--body-bg);
   color:var(--color-foreground);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;
 }
 
@@ -136,7 +157,7 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 .prow-iqama{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted)}
 .prow.passed{opacity:.72}   /* keeps passed prayers legible on TV (a11y contrast) */
 .prow.next{border-radius:var(--radius-md);border-bottom-color:transparent;
-  background:linear-gradient(90deg,rgba(185,141,78,.18),rgba(185,141,78,.03));
+  background:linear-gradient(90deg,rgba(var(--color-gold-rgb),.18),rgba(var(--color-gold-rgb),.03));
   box-shadow:0 0 0 1px var(--color-gold)}
 .prow.next .prow-ar{color:var(--color-gold)}
 .prow.next .prow-en{color:var(--color-gold-bright)}

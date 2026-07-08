@@ -14,6 +14,17 @@ import { getFirestore, doc, getDoc, collection, getDocs }
 const LOG = '[kiosk]';
 const REMINDER_ROTATE_MS = 15000;   // Daily Reminder panel now advances on its own timer (was slide-driven)
 
+// ---- theme: dark (default) or light (DUS App v5 terracotta/cream). ----
+// Set THEME below to switch which one this device boots into. ?theme=light|dark
+// in the URL overrides it without a redeploy — handy for previewing on a device
+// before committing to a change. Applied immediately (not waiting on
+// DOMContentLoaded) so there's no flash of the wrong theme on load.
+const THEME_DEFAULT = 'dark';
+const THEME = (new URLSearchParams(location.search).get('theme') === 'light') ? 'light'
+  : (new URLSearchParams(location.search).get('theme') === 'dark') ? 'dark'
+  : THEME_DEFAULT;
+document.documentElement.dataset.theme = THEME;
+
 const state = {
   prayer:  { data:null, error:null, path:null, sunrise:null },
   events:  { list:[], error:null, path:'oneOffEvents' },
