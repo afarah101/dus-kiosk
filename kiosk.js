@@ -215,28 +215,46 @@ async function loadLessons(db){
 // via the same Date-object comparison instead of two different, inconsistent checks.
 // Lessons are projected onto their next real calendar occurrence; a lesson cancelled this
 // week rolls to the following week rather than showing a date it won't actually happen.
+// Language/audience tag for the Upcoming Events panel — deliberately NOT the
+// teacher/speaker name (that's dropped from this panel entirely; still read
+// from Firestore, just not rendered here). Derived from the existing desc/
+// title text rather than a dedicated Firestore field, since none exists yet:
+// desc mentioning "Russian" (only sat-tawhid-russian's does — Tuesday's
+// same-titled "Kitāb at-Tawḥīd" lesson has a different desc with no such
+// mention, so this can't be a title match) or "Sisters" in the title (only
+// sun-sisters "Sisters Class" — unambiguous).
+function scheduleTag(title, desc){
+  const d=String(desc||'').toLowerCase();
+  if(d.includes('russian')) return 'In Russian';
+  if(String(title||'').toLowerCase().includes('sisters')) return 'Sisters';
+  return null;
+}
+
 function combinedSchedule(){
   const now=new Date();
   const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const weekEnd=new Date(todayStart.getTime()+7*864e5);
-  const events=state.events.list.map(ev=>({
-    date: toDate(pick(ev,['isoDate','date','datetime','start'])),
-    title: String(pick(ev,['title','name'])||'Event'),
-    desc: pick(ev,['description','desc','details','info']),
-    time: pick(ev,['time']),
-    sub: [pick(ev,['speaker','by']), pick(ev,['location','venue'])].filter(Boolean).join('  ·  '),
-  })).filter(x=>x.date);
+  const events=state.events.list.map(ev=>{
+    const title=String(pick(ev,['title','name'])||'Event');
+    const desc=pick(ev,['description','desc','details','info']);
+    return {
+      date: toDate(pick(ev,['isoDate','date','datetime','start'])),
+      title, desc,
+      time: pick(ev,['time']),
+      tag: scheduleTag(title, desc),
+    };
+  }).filter(x=>x.date);
 
   const lessons=state.lessons.list.map(les=>{
     let date=nextOccurrence(pick(les,['day','weekday']));
     if(!date) return null;
     if(les.cancelledThisWeek===true) date=new Date(date.getTime()+7*864e5);
+    const title=String(pick(les,['title','name'])||'Lesson');
+    const desc=pick(les,['desc','description']);
     return {
-      date,
-      title: String(pick(les,['title','name'])||'Lesson'),
-      desc: pick(les,['desc','description']),
+      date, title, desc,
       time: pick(les,['time','start']),
-      sub: pick(les,['teacher','speaker','instructor']) ? String(pick(les,['teacher','speaker','instructor'])) : '',
+      tag: scheduleTag(title, desc),
     };
   }).filter(Boolean);
 
@@ -433,11 +451,13 @@ function renderEventsPanel(){
       lastKey=key;
     }
     const c=el('div','ecard');
-    c.append(el('div','en', item.title));
-    const line=el('div','ex');
-    if(item.time) line.append(el('span','etime', String(item.time)+'  '));
-    if(item.sub) line.append(document.createTextNode(item.sub));
-    c.append(line);
+    const titleRow=el('div','etitle-row');
+    titleRow.append(el('div','en', item.title));
+    if(item.tag) titleRow.append(el('span','etag', item.tag));
+    c.append(titleRow);
+    // Deliberately title + time + tag only — no teacher/speaker/location text
+    // on this panel (the data is still read from Firestore, just not shown here).
+    if(item.time) c.append(el('div','ex', String(item.time)));
     wrap.append(c);
   });
   panel.append(wrap);
