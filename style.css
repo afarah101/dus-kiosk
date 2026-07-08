@@ -41,12 +41,12 @@
   --font-serif:"Cormorant Garamond","Georgia",serif;
   --font-sans:"DM Sans",-apple-system,"Segoe UI",Arial,sans-serif;
   --font-arabic:"Amiri Quran","Amiri","Geeza Pro","Noto Naskh Arabic",serif;
-  /* ---- type scale — resized for quadrant panels (was full-screen slides) ---- */
-  --text-badge:1.6vh; --text-xs:1.8vh; --text-sm:2.1vh; --text-md:2.4vh; --text-lg:2.8vh;
-  --text-panel-title:2.5vh;
-  --text-ring-name:1.9vh; --text-ring-time:3.3vh;
-  --text-verse-ar:1.85vh; --text-verse-en:1.4vh;
-  --text-row-time:2.6vh;
+  /* ---- type scale — sized for 1080p+ quadrant panels (no 720p target) ---- */
+  --text-badge:1.8vh; --text-xs:2vh; --text-sm:2.3vh; --text-md:2.6vh; --text-lg:3vh;
+  --text-panel-title:2.7vh;
+  --text-ring-name:2.7vh; --text-ring-time:4.8vh;
+  --text-verse-ar:2.5vh; --text-verse-en:1.95vh;
+  --text-row-time:3.2vh;
   /* ---- spacing: strict 8pt grid (same in both themes) ---- */
   --s-half:4px; --s1:8px; --s2:16px; --s3:24px; --s4:32px;
   --s5:40px; --s6:48px; --s8:64px; --s10:80px;
@@ -107,13 +107,13 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 /* ---------- left panel: Next Prayer ring ---------- */
 #panel-ring{align-items:center;text-align:center}
 .ring-content{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:var(--s-half);overflow:hidden}
+  align-items:center;justify-content:center;gap:var(--s1);overflow:hidden}
 /* Ring interior deliberately holds just 2 lines (Arabic name + time). A circle's
    usable width shrinks away from its vertical center, so anything past 2 short
    lines reliably breaks out of the stroke no matter how small the font — the
    "NEXT" label lives outside the circle instead, and the English name is
    dropped (Prayer Times panel already shows it). */
-.ring-wrap{position:relative;width:min(19vh,18vw);aspect-ratio:1/1;flex:0 0 auto}
+.ring-wrap{position:relative;width:min(25vh,22vw);aspect-ratio:1/1;flex:0 0 auto}
 .ring-svg{width:100%;height:100%;transform:rotate(-90deg)}
 .ring-track{fill:none;stroke:var(--color-border);stroke-width:10}
 .ring-progress{fill:none;stroke:var(--color-gold);stroke-width:10;stroke-linecap:round}
@@ -129,13 +129,13 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
   padding:var(--s-half) var(--s3);border-radius:var(--radius-pill);font-weight:700;box-shadow:var(--glow-gold);flex:0 0 auto}
 
 /* ---------- right panel: Upcoming Events (merged one-off events + weekly lessons) ---------- */
-.events-list{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:var(--s-half)}
+.events-list{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:2px}
 .day-head{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.14em;text-transform:uppercase;
-  color:var(--color-gold);padding-bottom:2px;margin-top:var(--s-half);border-bottom:1px solid var(--color-border);flex:0 0 auto}
+  color:var(--color-gold);padding-bottom:2px;margin-top:2px;border-bottom:1px solid var(--color-border);flex:0 0 auto}
 .day-head:first-child{margin-top:0}
 .ecard{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);
-  padding:var(--s-half) var(--s3);flex:0 0 auto}
-.en{font-family:var(--font-serif);font-size:var(--text-md);color:var(--color-foreground)}
+  padding:2px var(--s2);flex:0 0 auto}
+.en{font-family:var(--font-serif);font-size:var(--text-sm);color:var(--color-foreground)}
 .ex{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);margin-top:2px}
 .etime{color:var(--color-gold-bright)}
 
@@ -144,7 +144,7 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 /* min-height:0 on the row itself is required — without it flexbox floors
    flex-shrink at the row's natural content height, so 6 rows never actually
    compress to fit and the last one or two (Isha, Jumu'ah) silently clip. */
-.prow{display:flex;align-items:center;justify-content:space-between;padding:var(--s1) var(--s2);
+.prow{display:flex;align-items:center;justify-content:space-between;padding:var(--s2) var(--s2);
   border-bottom:1px solid var(--color-border);flex:1 1 0;min-height:0}
 .prow:last-child{border-bottom:none}
 .prow-left{display:flex;align-items:baseline;gap:var(--s2)}
@@ -166,35 +166,36 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 
 /* ---------- bottom-middle: Daily Reminder (rotating ayah) ---------- */
 /* Gaps here are vh-based (not the px 8pt grid) so they scale with the same panel
-   height the type scale scales with — keeps the citation guaranteed visible on
-   any display size instead of only at the resolution this was last tuned on. */
+   height the type scale scales with. Tuned for 1080p+ — 720p is no longer a
+   supported target, so this trades the old ultra-tight margins for real
+   visual presence while still holding zero overflow on all 6 verses. */
 .rcard{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;
-  text-align:center;gap:0.45vh;min-height:0;overflow:hidden}
-.rcard .kicker{font-family:var(--font-sans);font-size:var(--text-badge);letter-spacing:.2em;
+  text-align:center;gap:0.5vh;min-height:0;overflow:hidden}
+.rcard .kicker{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.2em;
   text-transform:uppercase;color:var(--color-gold);flex:0 0 auto}
 /* Arabic + body are both hard-capped by line count, never by available space —
    this guarantees the ref line below always has room, instead of competing for
    whatever's left. Amiri Quran's diacritics sit above/below the glyph baseline,
    so line-height is generous to keep them clear of the divider and body text. */
 .rcard .arabic{font-family:var(--font-arabic);direction:rtl;unicode-bidi:isolate;
-  color:var(--color-gold);font-size:var(--text-verse-ar);line-height:1.75;
+  color:var(--color-gold);font-size:var(--text-verse-ar);line-height:1.65;
   flex:0 0 auto;max-width:92%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 .rcard .divider{flex:0 0 auto;width:15%;min-width:48px;max-width:120px;height:1px;
   background:linear-gradient(90deg,transparent,var(--color-border),transparent)}
 .rcard .body{font-family:var(--font-serif);font-size:var(--text-verse-en);line-height:1.3;color:var(--color-foreground);
   flex:0 0 auto;max-width:96%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
-.rcard .ref{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-gold-bright);font-style:italic;flex:0 0 auto}
+.rcard .ref{font-family:var(--font-sans);font-size:var(--text-sm);color:var(--color-gold-bright);font-style:italic;flex:0 0 auto}
 
 /* ---------- bottom-right: Contact Information ---------- */
-.contact-list{display:flex;flex-direction:column;gap:var(--s-half);flex:0 0 auto}
-.crow{display:flex;flex-direction:column;gap:2px}
+.contact-list{display:flex;flex-direction:column;gap:0;flex:0 0 auto}
+.crow{display:flex;flex-direction:column;gap:1px}
 .crow-role{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.12em;
   text-transform:uppercase;color:var(--color-gold)}
-.crow-value{font-family:var(--font-serif);font-size:var(--text-md);color:var(--color-foreground)}
-.crow-phone{font-family:var(--font-sans);font-size:var(--text-sm);color:var(--color-gold-bright);font-variant-numeric:tabular-nums}
-.wa-block{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s1);padding-top:var(--s1);
+.crow-value{font-family:var(--font-serif);font-size:var(--text-sm);color:var(--color-foreground)}
+.crow-phone{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-gold-bright);font-variant-numeric:tabular-nums}
+.wa-block{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s-half);padding-top:var(--s-half);
   border-top:1px solid var(--color-border);flex:0 0 auto}
-.wa-text .crow-value{font-size:var(--text-sm);line-height:1.2}
+.wa-text .crow-value{font-size:var(--text-xs);line-height:1.2}
 .qr-placeholder{flex:0 0 auto;width:8vh;height:8vh;border:1px solid var(--color-border);
   border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:var(--color-gold)}
 .qr-icon{width:60%;height:60%}
