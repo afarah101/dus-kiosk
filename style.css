@@ -122,13 +122,15 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
   box-shadow:var(--shadow-card),0 0 64px -18px rgba(var(--color-gold-rgb),.45)}
 .ring-content{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:var(--s1);overflow:hidden}
-/* Single thin progress arc, one colour — no background track circle (an unfilled
-   ring is just blank space here, not a second stroke). Ring interior holds 3
-   short lines (Arabic name, time, English name); a circle's usable width
-   shrinks away from its vertical center, so each line is kept small/compact
-   to stay clear of the stroke — verified empirically per line, not assumed. */
+/* Thin full-circle background track (low-opacity) with the progress arc drawn
+   on top, both the same thin stroke-width — a complete-circle-with-progress
+   look, not the old thick two-tone version. Ring interior holds 3 short lines
+   (Arabic name, time, English name); a circle's usable width shrinks away
+   from its vertical center, so each line is kept small/compact to stay clear
+   of the stroke — verified empirically per line, not assumed. */
 .ring-wrap{position:relative;width:min(25vh,22vw);aspect-ratio:1/1;flex:0 0 auto}
 .ring-svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--color-gold);stroke-width:4;opacity:.18}
 .ring-progress{fill:none;stroke:var(--color-gold);stroke-width:4;stroke-linecap:round}
 .ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:var(--s-half);padding:0 14%}
@@ -164,13 +166,7 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 .edate-day{font-family:var(--font-sans);font-size:var(--text-badge);font-weight:700;letter-spacing:.06em;color:var(--color-muted)}
 .edate-num{font-family:var(--font-serif);font-size:var(--text-md);color:var(--color-gold);font-weight:600}
 .econtent{flex:1 1 auto;min-width:0}
-.etitle-row{display:flex;align-items:baseline;gap:var(--s1);flex-wrap:wrap}
 .en{font-family:var(--font-serif);font-size:var(--text-sm);color:var(--color-foreground)}
-/* Language/audience badge (e.g. "In Russian", "Sisters") — deliberately never
-   the teacher/speaker name, which this panel doesn't render at all. */
-.etag{font-family:var(--font-sans);font-size:var(--text-badge);letter-spacing:.06em;text-transform:uppercase;
-  color:var(--color-gold);background:rgba(var(--color-gold-rgb),.14);border:1px solid rgba(var(--color-gold-rgb),.35);
-  border-radius:var(--radius-pill);padding:1px var(--s1);white-space:nowrap}
 .edesc{font-family:var(--font-sans);font-size:var(--text-badge);font-weight:700;color:var(--color-muted);margin-top:var(--s-half);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .emeta{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);margin-top:var(--s-half)}
@@ -199,6 +195,14 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 .prow-ar{font-family:var(--font-arabic);font-size:var(--text-sm);color:var(--color-muted);direction:rtl;line-height:1}
 .prow-en{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);
   text-transform:uppercase;letter-spacing:.06em;line-height:1}
+/* Small text tags next to a row's name — "NEXT" on the current prayer, "FRI"
+   on Jumu'ah (it's the one row that only ever happens on a Friday). Subtle
+   pill by default; solid/on-gold when the row itself is also .next, so the
+   tag doesn't disappear against that row's own gold tint. */
+.prow-tag{font-family:var(--font-sans);font-size:var(--text-badge);font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--color-gold);background:rgba(var(--color-gold-rgb),.14);
+  border:1px solid rgba(var(--color-gold-rgb),.35);border-radius:var(--radius-pill);
+  padding:1px var(--s1);white-space:nowrap;line-height:1.4}
 .prow-time{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;line-height:1;
   font-family:var(--font-sans);font-size:var(--text-row-time);color:var(--color-foreground);font-weight:500}
 .prow.passed{opacity:.72}   /* keeps passed prayers legible on TV (a11y contrast) */
@@ -207,6 +211,7 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
   box-shadow:0 0 0 1px var(--color-gold)}
 .prow.next .prow-ar{color:var(--color-gold)}
 .prow.next .prow-en{color:var(--color-gold-bright)}
+.prow.next .prow-tag{color:var(--color-on-gold);background:var(--color-gold);border-color:var(--color-gold)}
 .prow.next .prow-time{color:var(--color-gold)}
 
 /* ---------- bottom-middle: Daily Reminder (rotating ayah) ---------- */
@@ -241,11 +246,20 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 .rcard .ref{font-family:var(--font-sans);font-size:var(--text-sm);color:var(--color-gold-bright);font-style:italic;flex:0 0 auto}
 
 /* ---------- bottom-right: Contact Information ---------- */
-.contact-list{display:flex;flex-direction:column;gap:0;flex:0 0 auto}
-.crow{display:flex;flex-direction:column;gap:1px}
+.contact-list{display:flex;flex-direction:column;gap:var(--s1);flex:0 0 auto}
+.crow{display:flex;align-items:center;gap:var(--s2)}
+/* Two-letter initials avatar — same tinted-pill language as the reminder
+   card's accent (gold text on a low-opacity gold background). */
+.crow-avatar{flex:0 0 auto;width:4.2vh;height:4.2vh;border-radius:var(--radius-pill);
+  background:rgba(var(--color-gold-rgb),.16);color:var(--color-gold);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-sans);font-size:var(--text-badge);font-weight:700;letter-spacing:.02em}
+.crow-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
 .crow-role{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.12em;
   text-transform:uppercase;color:var(--color-gold)}
 .crow-value{font-family:var(--font-serif);font-size:var(--text-sm);color:var(--color-foreground)}
+.crow-phone-line{display:flex;align-items:center;gap:var(--s-half)}
+.phone-icon{width:1.6vh;height:1.6vh;flex:0 0 auto;color:var(--color-gold-bright)}
 .crow-phone{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-gold-bright);font-variant-numeric:tabular-nums}
 .wa-block{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s-half);padding-top:var(--s-half);
   border-top:1px solid var(--color-border);flex:0 0 auto}

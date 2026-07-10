@@ -215,21 +215,6 @@ async function loadLessons(db){
 // via the same Date-object comparison instead of two different, inconsistent checks.
 // Lessons are projected onto their next real calendar occurrence; a lesson cancelled this
 // week rolls to the following week rather than showing a date it won't actually happen.
-// Language/audience tag for the Upcoming Events panel — deliberately NOT the
-// teacher/speaker name (that's dropped from this panel entirely; still read
-// from Firestore, just not rendered here). Derived from the existing desc/
-// title text rather than a dedicated Firestore field, since none exists yet:
-// desc mentioning "Russian" (only sat-tawhid-russian's does — Tuesday's
-// same-titled "Kitāb at-Tawḥīd" lesson has a different desc with no such
-// mention, so this can't be a title match) or "Sisters" in the title (only
-// sun-sisters "Sisters Class" — unambiguous).
-function scheduleTag(title, desc){
-  const d=String(desc||'').toLowerCase();
-  if(d.includes('russian')) return 'In Russian';
-  if(String(title||'').toLowerCase().includes('sisters')) return 'Sisters';
-  return null;
-}
-
 // Firestore's lessons.desc field conflates description with teacher
 // attribution in one freeform sentence run (e.g. "Lesson in Russian. Taught
 // by Ustādh Abu Mūsā."), and there's no separate structured field to read
@@ -258,7 +243,6 @@ function combinedSchedule(){
       title, desc,
       time: pick(ev,['time']),
       location: pick(ev,['location','venue']),
-      tag: scheduleTag(title, desc),
     };
   }).filter(x=>x.date);
 
@@ -273,7 +257,6 @@ function combinedSchedule(){
       desc: stripTeacherAttribution(rawDesc),
       time: pick(les,['time','start']),
       location: null,
-      tag: scheduleTag(title, rawDesc),
     };
   }).filter(Boolean);
 
@@ -333,17 +316,21 @@ function renderRingPanel(){
   panel.append(panelTitle('Next Prayer'));
   if(!state.prayer.data) return;
 
-  // Single thin progress arc — no background track circle, no separate "NEXT"
-  // label (the panel title "NEXT PRAYER" already says that).
+  // Thin full-circle background track (low-opacity) with the progress arc
+  // drawn on top — no separate "NEXT" label (the panel title "NEXT PRAYER"
+  // already says that).
   const wrap=el('div','ring-wrap');
   const svgNS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(svgNS,'svg');
   svg.setAttribute('viewBox','0 0 200 200'); svg.classList.add('ring-svg');
+  const track=document.createElementNS(svgNS,'circle');
+  track.setAttribute('cx','100'); track.setAttribute('cy','100'); track.setAttribute('r',String(RING_R));
+  track.classList.add('ring-track');
   const prog=document.createElementNS(svgNS,'circle');
   prog.setAttribute('cx','100'); prog.setAttribute('cy','100'); prog.setAttribute('r',String(RING_R));
   prog.classList.add('ring-progress'); prog.id='ring-progress';
   prog.style.strokeDasharray=String(RING_C);
-  svg.append(prog);
+  svg.append(track,prog);
 
   const inner=el('div','ring-inner');
   const nameAr=ar('ring-name-ar',''); nameAr.id='ring-name-ar';
@@ -399,6 +386,8 @@ function renderPrayersPanel(){
     const name=el('div','prow-name');
     name.append(ar('prow-ar', r.ar));
     name.append(el('div','prow-en', r.label));
+    if(isNext) name.append(el('span','prow-tag','NEXT'));
+    if(r.id==='jumuah') name.append(el('span','prow-tag','FRI'));
     row.append(name);
     row.append(el('div','prow-time', r.begin?fmt12(r.begin):'—'));
     list.append(row);
@@ -466,10 +455,10 @@ function renderEventsPanel(){
     c.append(badge);
 
     const content=el('div','econtent');
-    const titleRow=el('div','etitle-row');
-    titleRow.append(el('div','en', item.title));
-    if(item.tag) titleRow.append(el('span','etag', item.tag));
-    content.append(titleRow);
+    // Title + description only — no separate language/audience tag, since it
+    // was always redundant with the description that already says the same
+    // thing (e.g. "IN RUSSIAN" badge next to a "Lesson in Russian." line).
+    content.append(el('div','en', item.title));
     if(item.desc) content.append(el('div','edesc', item.desc));
     // time + location: deliberately no teacher/speaker text on this panel
     // (still read from Firestore, just not rendered here).
@@ -504,6 +493,28 @@ function advanceReminder(){
   renderReminderPanel();
 }
 
+// Two-letter avatar initials — first letter of the first two words at least
+// 3 characters long, so short connector words ("Us", "Of") get skipped
+// (e.g. "Daar Us Sunnah Office" -> "DS", not "DU").
+function initials(name){
+  const words=String(name||'').split(/\s+/).filter(w=>w.length>2);
+  return words.slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
+}
+
+// Feather Icons "phone" glyph (MIT licensed), stroke-based to match the
+// existing QR placeholder's currentColor convention.
+function phoneIcon(){
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox','0 0 24 24'); svg.classList.add('phone-icon');
+  const path=document.createElementNS(svgNS,'path');
+  path.setAttribute('d','M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z');
+  path.setAttribute('fill','none'); path.setAttribute('stroke','currentColor'); path.setAttribute('stroke-width','2');
+  path.setAttribute('stroke-linecap','round'); path.setAttribute('stroke-linejoin','round');
+  svg.append(path);
+  return svg;
+}
+
 // Generic "QR" glyph (finder-pattern corners) — NOT a functional scannable code.
 // No WhatsApp QR image asset has been provided yet; this is a flagged placeholder,
 // not a fabricated code. Replace with a real <img> once the asset exists.
@@ -531,9 +542,15 @@ function renderContactPanel(){
   const list=el('div','contact-list');
   [CONTACT.imam, CONTACT.management].forEach(c=>{
     const row=el('div','crow');
-    row.append(el('div','crow-role', c.role));
-    row.append(el('div','crow-value', c.name));
-    row.append(el('div','crow-phone', c.phone));
+    row.append(el('div','crow-avatar', initials(c.name)));
+    const info=el('div','crow-info');
+    info.append(el('div','crow-role', c.role));
+    info.append(el('div','crow-value', c.name));
+    const phoneLine=el('div','crow-phone-line');
+    phoneLine.append(phoneIcon());
+    phoneLine.append(el('span','crow-phone', c.phone));
+    info.append(phoneLine);
+    row.append(info);
     list.append(row);
   });
   panel.append(list);
