@@ -460,15 +460,20 @@ function renderEventsPanel(){
     // thing (e.g. "IN RUSSIAN" badge next to a "Lesson in Russian." line).
     content.append(el('div','en', item.title));
     if(item.desc) content.append(el('div','edesc', item.desc));
-    // time + location: deliberately no teacher/speaker text on this panel
-    // (still read from Firestore, just not rendered here).
+    c.append(content);
+
+    // time + location: own right-aligned zone, sibling of econtent (not
+    // nested inside it) so it forms a distinct 3rd column per the reference
+    // layout. Deliberately no teacher/speaker text on this panel (still read
+    // from Firestore, just not rendered here). Lessons have no `location`
+    // field in Firestore (verified against the live schema) — left blank
+    // rather than fabricated.
     if(item.time || item.location){
       const meta=el('div','emeta');
-      meta.append(el('span','etime', item.time?String(item.time):''));
-      if(item.location) meta.append(el('span','eloc', item.location));
-      content.append(meta);
+      if(item.time) meta.append(el('div','etime', String(item.time)));
+      if(item.location) meta.append(el('div','eloc', item.location));
+      c.append(meta);
     }
-    c.append(content);
     wrap.append(c);
   });
   panel.append(wrap);
