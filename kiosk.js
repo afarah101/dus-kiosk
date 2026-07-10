@@ -388,14 +388,9 @@ function renderPrayersPanel(){
   const sched=computeSchedule();
   const list=el('div','prayer-list');
 
-  // Header labels the 3 grid columns once instead of repeating "Jamā'ah" on
-  // every row — same grid-template-columns as .prow so it lines up exactly.
-  const header=el('div','prow prow-header');
-  header.append(el('div','prow-name',''));
-  header.append(el('div','prow-col-label','BEGINS'));
-  header.append(el('div','prow-col-label','JAMĀ\'AH'));
-  list.append(header);
-
+  // Single-column layout: prayer name + one time only. r.iqama is still
+  // computed by computeSchedule() from Firestore's jamā'ah fields (fj/zj/aj/
+  // ij) — the data keeps flowing, it's just not rendered on this row anymore.
   sched.rows.forEach(r=>{
     const row=el('div','prow');
     const isNext = sched.next && r.id===sched.next.id && !sched.rollover;
@@ -406,7 +401,6 @@ function renderPrayersPanel(){
     name.append(el('div','prow-en', r.label));
     row.append(name);
     row.append(el('div','prow-time', r.begin?fmt12(r.begin):'—'));
-    row.append(el('div','prow-jamaah', r.iqama?fmt12(r.iqama):''));
     list.append(row);
   });
   panel.append(list);

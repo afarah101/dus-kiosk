@@ -180,18 +180,15 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 
 /* ---------- bottom-left: Prayer Times list (6 rows) ---------- */
 .prayer-list{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
-/* Every .prow shares the same grid-template-columns, so the time and Jamā'ah
-   columns land at the same x-position on every row regardless of name width
-   or digit count — 9ch comfortably fits the widest case ("10:45 PM").
-   min-height:0 on the row itself is required — without it flexbox floors
-   flex-shrink at the row's natural content height, so 6 rows never actually
-   compress to fit and the last one or two (Isha, Jumu'ah) silently clip. */
-.prow{display:grid;grid-template-columns:minmax(0,1fr) 15vh 11vh;column-gap:var(--s2);align-items:center;
+/* Single-column layout: name | one time. Every .prow shares the same
+   grid-template-columns so the time lands at the same x-position on every
+   row regardless of name width or digit count. min-height:0 on the row
+   itself is required — without it flexbox floors flex-shrink at the row's
+   natural content height, so 6 rows never actually compress to fit and the
+   last one or two (Isha, Jumu'ah) silently clip. */
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 15vh;column-gap:var(--s2);align-items:center;
   padding:var(--s1) var(--s2);border-bottom:1px solid var(--color-border);flex:1 1 0;min-height:0}
 .prow:last-child{border-bottom:none}
-.prow-header{flex:0 0 auto;padding:0 var(--s2) var(--s-half);border-bottom:1px solid var(--color-border)}
-.prow-col-label{font-family:var(--font-sans);font-size:var(--text-badge);letter-spacing:.1em;
-  text-transform:uppercase;color:var(--color-muted);text-align:right}
 .prow-name{display:flex;align-items:baseline;gap:var(--s2)}
 /* Explicit line-height everywhere in a .prow: the default "normal" line-height
    (~1.3x font-size for DM Sans) is taller than the row's own content-box at
@@ -202,9 +199,8 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 .prow-ar{font-family:var(--font-arabic);font-size:var(--text-sm);color:var(--color-muted);direction:rtl;line-height:1}
 .prow-en{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted);
   text-transform:uppercase;letter-spacing:.06em;line-height:1}
-.prow-time,.prow-jamaah{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;line-height:1}
-.prow-time{font-family:var(--font-sans);font-size:var(--text-row-time);color:var(--color-foreground);font-weight:500}
-.prow-jamaah{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-muted)}
+.prow-time{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;line-height:1;
+  font-family:var(--font-sans);font-size:var(--text-row-time);color:var(--color-foreground);font-weight:500}
 .prow.passed{opacity:.72}   /* keeps passed prayers legible on TV (a11y contrast) */
 .prow.next{border-radius:var(--radius-md);border-bottom-color:transparent;
   background:linear-gradient(90deg,rgba(var(--color-gold-rgb),.18),rgba(var(--color-gold-rgb),.03));
@@ -212,7 +208,6 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 .prow.next .prow-ar{color:var(--color-gold)}
 .prow.next .prow-en{color:var(--color-gold-bright)}
 .prow.next .prow-time{color:var(--color-gold)}
-.prow.next .prow-jamaah{color:var(--color-gold-bright)}
 
 /* ---------- bottom-middle: Daily Reminder (rotating ayah) ---------- */
 /* Gaps here are vh-based (not the px 8pt grid) so they scale with the same panel
