@@ -34,7 +34,7 @@ const state = {
 // ---- Contact info: static, no Firestore collection backs this. ----
 // WhatsApp QR image asset not yet provided — flagged as pending below, not fabricated.
 const CONTACT = {
-  imam:       { role:"Imam & Khatib",     name:"Shaykh Abu Amarah",     phone:"020 7946 0111" },
+  imam:       { role:"Imam & Khatib",     name:"Abu Amarah",            phone:"020 7946 0111" },
   management: { role:"Masjid Management", name:"Daar Us Sunnah Office", phone:"020 7946 0958" },
   whatsapp:   { role:"WhatsApp Updates",  value:"Message the Imam — scan to chat on WhatsApp" },
 };
