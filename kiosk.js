@@ -230,10 +230,26 @@ function scheduleTag(title, desc){
   return null;
 }
 
+// Firestore's lessons.desc field conflates description with teacher
+// attribution in one freeform sentence run (e.g. "Lesson in Russian. Taught
+// by Ustādh Abu Mūsā."), and there's no separate structured field to read
+// instead. Verified against all 11 real lesson docs: "Taught by ... ." always
+// appears as a clean trailing clause ending at the next period, so stripping
+// it is safe and doesn't touch genuine description text before it — this
+// must never leak the teacher name back into the Events panel display.
+function stripTeacherAttribution(desc){
+  if(!desc) return null;
+  const cleaned=String(desc).replace(/Taught by[^.]*\.?/gi,'').trim();
+  return cleaned || null;
+}
+
 function combinedSchedule(){
   const now=new Date();
   const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const weekEnd=new Date(todayStart.getTime()+7*864e5);
+  // oneOffEvents has a real `location` field; lessons has none (verified
+  // against the live schema) — location stays null for lessons rather than
+  // guessing at a venue.
   const events=state.events.list.map(ev=>{
     const title=String(pick(ev,['title','name'])||'Event');
     const desc=pick(ev,['description','desc','details','info']);
@@ -241,6 +257,7 @@ function combinedSchedule(){
       date: toDate(pick(ev,['isoDate','date','datetime','start'])),
       title, desc,
       time: pick(ev,['time']),
+      location: pick(ev,['location','venue']),
       tag: scheduleTag(title, desc),
     };
   }).filter(x=>x.date);
@@ -250,11 +267,13 @@ function combinedSchedule(){
     if(!date) return null;
     if(les.cancelledThisWeek===true) date=new Date(date.getTime()+7*864e5);
     const title=String(pick(les,['title','name'])||'Lesson');
-    const desc=pick(les,['desc','description']);
+    const rawDesc=pick(les,['desc','description']);
     return {
-      date, title, desc,
+      date, title,
+      desc: stripTeacherAttribution(rawDesc),
       time: pick(les,['time','start']),
-      tag: scheduleTag(title, desc),
+      location: null,
+      tag: scheduleTag(title, rawDesc),
     };
   }).filter(Boolean);
 
@@ -314,35 +333,30 @@ function renderRingPanel(){
   panel.append(panelTitle('Next Prayer'));
   if(!state.prayer.data) return;
 
-  const label=el('div',null,'NEXT'); label.id='ring-label';
-
+  // Single thin progress arc — no background track circle, no separate "NEXT"
+  // label (the panel title "NEXT PRAYER" already says that).
   const wrap=el('div','ring-wrap');
   const svgNS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(svgNS,'svg');
   svg.setAttribute('viewBox','0 0 200 200'); svg.classList.add('ring-svg');
-  const track=document.createElementNS(svgNS,'circle');
-  track.setAttribute('cx','100'); track.setAttribute('cy','100'); track.setAttribute('r',String(RING_R));
-  track.classList.add('ring-track');
   const prog=document.createElementNS(svgNS,'circle');
   prog.setAttribute('cx','100'); prog.setAttribute('cy','100'); prog.setAttribute('r',String(RING_R));
   prog.classList.add('ring-progress'); prog.id='ring-progress';
   prog.style.strokeDasharray=String(RING_C);
-  svg.append(track,prog);
+  svg.append(prog);
 
-  // Ring interior holds only Arabic name + time — a circle's usable width shrinks
-  // away from its vertical center, so stacking more lines here (English name, a
-  // label) reliably breaks out of the circle no matter how small the font.
   const inner=el('div','ring-inner');
   const nameAr=ar('ring-name-ar',''); nameAr.id='ring-name-ar';
   const time=el('div',null,'--:--:--'); time.id='ring-time';
-  inner.append(nameAr,time);
+  const nameEn=el('div',null,''); nameEn.id='ring-name-en';
+  inner.append(nameAr,time,nameEn);
 
   wrap.append(svg,inner);
 
   const trg=el('div',null,''); trg.id='jamaa-trigger';
 
   const content=el('div','ring-content');
-  content.append(label,wrap,trg);
+  content.append(wrap,trg);
   panel.append(content);
 
   tickRing();
@@ -351,11 +365,11 @@ function renderRingPanel(){
 function tickRing(){
   const ringTime=$('#ring-time'); if(!ringTime) return;   // ring not rendered (no prayer data)
   const sched=computeSchedule();
-  const label=$('#ring-label'), nameAr=$('#ring-name-ar');
+  const nameAr=$('#ring-name-ar'), nameEn=$('#ring-name-en');
   const prog=$('#ring-progress'), trg=$('#jamaa-trigger');
   if(!sched.next){ ringTime.textContent='--:--:--'; return; }
-  label.textContent = sched.rollover ? 'FIRST PRAYER' : 'NEXT';
   nameAr.textContent = sched.next.ar;
+  nameEn.textContent = sched.rollover ? 'FIRST: '+sched.next.label.toUpperCase() : sched.next.label.toUpperCase();
   const diff=Math.max(0,Math.floor((sched.next.at.getTime()-Date.now())/1000));
   const h=Math.floor(diff/3600), m=Math.floor(diff%3600/60), s=diff%60;
   ringTime.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
@@ -440,7 +454,7 @@ function weekEventsForDisplay(perDayCap, totalDaysCap){
 function renderEventsPanel(){
   const panel=$('#panel-events'); panel.innerHTML='';
   panel.append(panelTitle('Upcoming Events'));
-  const items=weekEventsForDisplay(1,3);   // cap so a fixed-height TV panel never scrolls
+  const items=weekEventsForDisplay(1,2);   // cap so a fixed-height TV panel never scrolls
   if(!items.length) return;   // never render "no events" text — just the title
   const wrap=el('div','events-list');
   let lastKey=null;
@@ -451,13 +465,27 @@ function renderEventsPanel(){
       lastKey=key;
     }
     const c=el('div','ecard');
+
+    const badge=el('div','edate-badge');
+    badge.append(el('div','edate-day', item.date.toLocaleDateString('en-GB',{weekday:'short'}).toUpperCase()));
+    badge.append(el('div','edate-num', String(item.date.getDate())));
+    c.append(badge);
+
+    const content=el('div','econtent');
     const titleRow=el('div','etitle-row');
     titleRow.append(el('div','en', item.title));
     if(item.tag) titleRow.append(el('span','etag', item.tag));
-    c.append(titleRow);
-    // Deliberately title + time + tag only — no teacher/speaker/location text
-    // on this panel (the data is still read from Firestore, just not shown here).
-    if(item.time) c.append(el('div','ex', String(item.time)));
+    content.append(titleRow);
+    if(item.desc) content.append(el('div','edesc', item.desc));
+    // time + location: deliberately no teacher/speaker text on this panel
+    // (still read from Firestore, just not rendered here).
+    if(item.time || item.location){
+      const meta=el('div','emeta');
+      meta.append(el('span','etime', item.time?String(item.time):''));
+      if(item.location) meta.append(el('span','eloc', item.location));
+      content.append(meta);
+    }
+    c.append(content);
     wrap.append(c);
   });
   panel.append(wrap);

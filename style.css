@@ -70,11 +70,18 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 #brand img{height:7.2vh;width:auto;display:block}
 #brand-text{font-family:var(--font-serif);font-size:var(--text-lg);color:var(--color-foreground);letter-spacing:.02em}
 #brand-text .sep{color:var(--color-gold);margin:0 var(--s1)}
+/* Deliberately secondary to the mosque name in #brand-text (text-lg, serif,
+   weight 600) — smaller, lighter weight, muted colour, so the eye lands on
+   the header title first, not the clock. text-sm (not text-xs) is the actual
+   floor here: muted-on-background is ~3.85:1 in light theme, which only
+   clears WCAG AA at the 24px normal-weight "large text" threshold — going
+   smaller without also going bold (which would fight "lighter weight") drops
+   below it. Still visibly smaller than the title either way. */
 #dateblock{text-align:right;display:flex;flex-direction:column;gap:var(--s-half)}
-#date-line{font-family:var(--font-sans);font-size:var(--text-md);color:var(--color-foreground);font-weight:600}
+#date-line{font-family:var(--font-sans);font-size:var(--text-sm);color:var(--color-muted);font-weight:400}
 #date-line .sep{color:var(--color-gold);margin:0 var(--s1)}
 #time-en{font-variant-numeric:tabular-nums}
-#date-ar{font-size:var(--text-sm);color:var(--color-gold);font-family:var(--font-arabic);
+#date-ar{font-size:var(--text-sm);color:var(--color-muted);font-family:var(--font-arabic);
   direction:rtl;unicode-bidi:isolate;line-height:1.7}
 
 /* ---------- board: fixed 3x2 grid, no rotation ---------- */
@@ -115,22 +122,24 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
   box-shadow:var(--shadow-card),0 0 64px -18px rgba(var(--color-gold-rgb),.45)}
 .ring-content{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:var(--s1);overflow:hidden}
-/* Ring interior deliberately holds just 2 lines (Arabic name + time). A circle's
-   usable width shrinks away from its vertical center, so anything past 2 short
-   lines reliably breaks out of the stroke no matter how small the font — the
-   "NEXT" label lives outside the circle instead, and the English name is
-   dropped (Prayer Times panel already shows it). */
+/* Single thin progress arc, one colour — no background track circle (an unfilled
+   ring is just blank space here, not a second stroke). Ring interior holds 3
+   short lines (Arabic name, time, English name); a circle's usable width
+   shrinks away from its vertical center, so each line is kept small/compact
+   to stay clear of the stroke — verified empirically per line, not assumed. */
 .ring-wrap{position:relative;width:min(25vh,22vw);aspect-ratio:1/1;flex:0 0 auto}
 .ring-svg{width:100%;height:100%;transform:rotate(-90deg)}
-.ring-track{fill:none;stroke:var(--color-border);stroke-width:10}
-.ring-progress{fill:none;stroke:var(--color-gold);stroke-width:10;stroke-linecap:round}
+.ring-progress{fill:none;stroke:var(--color-gold);stroke-width:4;stroke-linecap:round}
 .ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:var(--s-half);padding:0 14%}
-#ring-label{font-family:var(--font-sans);font-size:var(--text-badge);letter-spacing:.3em;
-  text-transform:uppercase;color:var(--color-muted);flex:0 0 auto}
 .ring-name-ar{font-family:var(--font-arabic);font-size:var(--text-ring-name);color:var(--color-gold);direction:rtl}
 #ring-time{font-family:var(--font-sans);font-size:var(--text-ring-time);color:var(--color-gold);
   font-variant-numeric:tabular-nums;font-weight:500;white-space:nowrap}
+/* font-weight:700 here is load-bearing for contrast in light theme (muted-on-
+   surface is ~4.25:1 at this size/weight — below AA's 4.5:1 for normal-weight
+   small text, but within the large-text-bold 3:1 exemption). */
+#ring-name-en{font-family:var(--font-sans);font-size:var(--text-badge);font-weight:700;letter-spacing:.15em;
+  color:var(--color-muted);white-space:nowrap}
 #jamaa-trigger{font-family:var(--font-sans);font-size:var(--text-xs);letter-spacing:.1em;
   text-transform:uppercase;color:var(--color-on-gold);background:var(--color-gold);
   padding:var(--s-half) var(--s3);border-radius:var(--radius-pill);font-weight:700;box-shadow:var(--glow-gold);flex:0 0 auto}
@@ -141,7 +150,20 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
   color:var(--color-gold);padding-bottom:2px;margin-top:2px;border-bottom:1px solid var(--color-border);flex:0 0 auto}
 .day-head:first-child{margin-top:0}
 .ecard{border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);
-  padding:2px var(--s2);flex:0 0 auto}
+  padding:var(--s1) var(--s2);flex:0 0 auto;display:flex;align-items:flex-start;gap:var(--s2)}
+/* Per-event date badge (day abbrev + number, stacked) — the day-head above
+   already groups by date, but each card also carries its own badge per the
+   reference design; harmless redundancy, not a data conflict. */
+.edate-badge{flex:0 0 auto;width:5vh;text-align:center;line-height:1.1}
+/* font-weight:700 on --color-muted small text (here and .edesc/.eloc below) is
+   load-bearing for contrast, not just style: at --text-badge size, muted-on-
+   surface-2 is ~3.5:1 in light theme — below the 4.5:1 AA floor for normal-
+   weight small text, but WCAG's large-text exemption (>=14pt/~18.7px bold
+   needs only 3:1) applies once it's actually bold. Computed against the real
+   theme hex values, not eyeballed. */
+.edate-day{font-family:var(--font-sans);font-size:var(--text-badge);font-weight:700;letter-spacing:.06em;color:var(--color-muted)}
+.edate-num{font-family:var(--font-serif);font-size:var(--text-md);color:var(--color-gold);font-weight:600}
+.econtent{flex:1 1 auto;min-width:0}
 .etitle-row{display:flex;align-items:baseline;gap:var(--s1);flex-wrap:wrap}
 .en{font-family:var(--font-serif);font-size:var(--text-sm);color:var(--color-foreground)}
 /* Language/audience badge (e.g. "In Russian", "Sisters") — deliberately never
@@ -149,7 +171,12 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 .etag{font-family:var(--font-sans);font-size:var(--text-badge);letter-spacing:.06em;text-transform:uppercase;
   color:var(--color-gold);background:rgba(var(--color-gold-rgb),.14);border:1px solid rgba(var(--color-gold-rgb),.35);
   border-radius:var(--radius-pill);padding:1px var(--s1);white-space:nowrap}
-.ex{font-family:var(--font-sans);font-size:var(--text-xs);color:var(--color-gold-bright);margin-top:2px}
+.edesc{font-family:var(--font-sans);font-size:var(--text-badge);font-weight:700;color:var(--color-muted);margin-top:var(--s-half);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.emeta{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);margin-top:var(--s-half)}
+.etime{font-family:var(--font-sans);font-size:var(--text-xs);font-weight:700;color:var(--color-gold-bright);white-space:nowrap}
+.eloc{font-family:var(--font-sans);font-size:var(--text-badge);font-weight:700;color:var(--color-muted);text-align:right;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---------- bottom-left: Prayer Times list (6 rows) ---------- */
 .prayer-list{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
