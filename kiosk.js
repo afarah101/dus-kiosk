@@ -551,6 +551,56 @@ function startTimers(){
   setInterval(()=>{ tickRing(); tickClock(); }, 1000);
   setInterval(setHeaderHijri, 60000);
   setInterval(advanceReminder, REMINDER_ROTATE_MS);
+  startUpdateChecks();
+}
+
+// ============================================================================
+//  SELF-UPDATE POLLING — this is an unattended kiosk display with no way for
+//  anyone to manually refresh it, so it has to notice its own new deploys.
+//  Fetches its own source (kiosk.js) rather than a separate version-marker
+//  file: this file changes on every real deploy already, so a dedicated
+//  marker would just be one more file to remember to touch/keep in sync for
+//  no real benefit. Hash-compares against the version that's actually
+//  running (captured on the first check, right after boot) rather than
+//  diffing raw text — cheaper to store/compare and avoids false positives
+//  from incidental whitespace-only or encoding differences.
+// ============================================================================
+const UPDATE_CHECK_MS = 7*60*1000;   // 7 min — middle of the requested 5-10 min range
+let runningSourceHash = null;
+
+async function sha256Hex(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkForUpdate(){
+  try{
+    // cache:'no-store' + a timestamp query param: belt-and-braces against
+    // both the browser's own HTTP cache and any CDN/edge cache Vercel puts
+    // in front of the static file — either alone can silently serve a stale
+    // copy, which would either mask a real update or (worse) make an
+    // unchanged file look different every time from a cache-varying response.
+    const res = await fetch(`kiosk.js?_=${Date.now()}`, {cache:'no-store'});
+    if(!res.ok) throw new Error(`fetch failed: ${res.status}`);
+    const hash = await sha256Hex(await res.text());
+    if(runningSourceHash===null){
+      runningSourceHash = hash;   // first check just establishes the baseline — never reloads
+      return;
+    }
+    if(hash!==runningSourceHash){
+      console.info(`${LOG} new deploy detected, reloading`);
+      location.reload();
+    }
+  }catch(e){
+    // Network blip / transient failure — never reload or surface an error
+    // for a single failed check; just try again next interval.
+    console.error(`${LOG} update check failed (will retry next interval):`, e.message);
+  }
+}
+
+function startUpdateChecks(){
+  checkForUpdate();   // establish the baseline hash immediately, not after the first 7-minute wait
+  setInterval(checkForUpdate, UPDATE_CHECK_MS);
 }
 
 // ============================================================================
