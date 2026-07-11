@@ -356,7 +356,7 @@ function tickRing(){
   nameEn.textContent = sched.rollover ? 'FIRST: '+sched.next.label.toUpperCase() : sched.next.label.toUpperCase();
   const diff=Math.max(0,Math.floor((sched.next.at.getTime()-Date.now())/1000));
   const h=Math.floor(diff/3600), m=Math.floor(diff%3600/60), s=diff%60;
-  ringTime.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  ringTime.textContent = h===0 ? `${pad(m)}:${pad(s)}` : `${pad(h)}:${pad(m)}:${pad(s)}`;
   if(prog) prog.style.strokeDashoffset = String(RING_C*(1-ringProgress(sched)));
   if(trg){
     const jAt = sched.next.iqama ? timeOnDate(new Date(),sched.next.iqama) : sched.next.at;
