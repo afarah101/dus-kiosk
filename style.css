@@ -394,3 +394,10 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 [data-theme="light"] .crow-phone-line{flex:0 0 auto;margin-left:auto}
 [data-theme="light"] .contact-list{gap:var(--s3)}
 [data-theme="light"] .wa-block{margin-top:var(--s3);padding-top:var(--s2)}
+/* Countdown digits inside the Next Prayer ring (#ring-time) had no light-theme
+   override at all — the shared base rule (line ~155) sets colour:var(--color-
+   gold) unconditionally for both themes, so it rendered terracotta on light
+   with nothing else competing/overriding it. Scoped to the ID alone, so the
+   ring arc (.ring-track/.ring-progress), Arabic name (.ring-name-ar) and
+   English caption (#ring-name-en) — all separate selectors — are untouched. */
+[data-theme="light"] #ring-time{color:var(--color-foreground)}
