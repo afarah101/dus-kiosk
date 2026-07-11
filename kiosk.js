@@ -225,13 +225,20 @@ function stripTeacherAttribution(desc){
   return cleaned || null;
 }
 
+// Location isn't reliable from Firestore for either collection — lessons
+// never carry the field at all, and oneOffEvents only carries it
+// inconsistently (verified against the live schema) — so this is a fixed,
+// explicit title-based mapping instead, per product decision, not a
+// Firestore read. "Sisters Class" is the one exception; everything else
+// defaults to the main hall.
+function locationForTitle(title){
+  return /sisters/i.test(String(title||'')) ? "Sisters' Section" : 'Main Prayer Hall';
+}
+
 function combinedSchedule(){
   const now=new Date();
   const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const weekEnd=new Date(todayStart.getTime()+7*864e5);
-  // oneOffEvents has a real `location` field; lessons has none (verified
-  // against the live schema) — location stays null for lessons rather than
-  // guessing at a venue.
   const events=state.events.list.map(ev=>{
     const title=String(pick(ev,['title','name'])||'Event');
     const desc=pick(ev,['description','desc','details','info']);
@@ -239,7 +246,7 @@ function combinedSchedule(){
       date: toDate(pick(ev,['isoDate','date','datetime','start'])),
       title, desc,
       time: pick(ev,['time']),
-      location: pick(ev,['location','venue']),
+      location: locationForTitle(title),
     };
   }).filter(x=>x.date);
 
@@ -253,7 +260,7 @@ function combinedSchedule(){
       date, title,
       desc: stripTeacherAttribution(rawDesc),
       time: pick(les,['time','start']),
-      location: null,
+      location: locationForTitle(title),
     };
   }).filter(Boolean);
 
@@ -381,10 +388,21 @@ function renderPrayersPanel(){
     if(isNext) row.classList.add('next');
     else if(r.at && r.at.getTime()<sched.now && r.id!=='jumuah') row.classList.add('passed');
     const name=el('div','prow-name');
-    name.append(ar('prow-ar', r.ar));
-    name.append(el('div','prow-en', r.label));
+    // Light theme's reference shows English-first (Arabic as the smaller,
+    // secondary label) — dark theme's original Arabic-first order is
+    // preserved untouched since THEME never changes at runtime today, but
+    // this keeps that code path intact if it ever does.
+    if(THEME==='light'){
+      name.append(el('div','prow-en', r.label));
+      name.append(ar('prow-ar', r.ar));
+    } else {
+      name.append(ar('prow-ar', r.ar));
+      name.append(el('div','prow-en', r.label));
+    }
     if(isNext) name.append(el('span','prow-tag','NEXT'));
-    if(r.id==='jumuah') name.append(el('span','prow-tag','FRI'));
+    // "FRI" next to Jumu'ah is redundant in the light-theme reference (every
+    // Jumu'ah row is inherently Friday) — dark theme keeps the tag.
+    if(r.id==='jumuah' && THEME!=='light') name.append(el('span','prow-tag','FRI'));
     row.append(name);
     row.append(el('div','prow-time', r.begin?fmt12(r.begin):'—'));
     list.append(row);
@@ -434,7 +452,15 @@ function weekEventsForDisplay(perDayCap, totalDaysCap){
 function renderEventsPanel(){
   const panel=$('#panel-events'); panel.innerHTML='';
   panel.append(panelTitle('Upcoming Events'));
-  const items=weekEventsForDisplay(1,2);   // cap so a fixed-height TV panel never scrolls
+  // perDayCap=2 so a weekend day with more than one event isn't silently
+  // truncated to a single item; totalDaysCap=3 guarantees 3 events display
+  // even when the weekend itself only carries 1-2 (as observed live: 1 on
+  // Sat, 1 on Sun). Row borders were removed in favour of thin dividers
+  // (style.css) specifically to free the vertical room this needs — the
+  // previous 1/2 caps were a measured, real overflow constraint at the time,
+  // not an arbitrary choice, but that constraint no longer holds now that
+  // rows are flat dividers instead of bordered/padded cards.
+  const items=weekEventsForDisplay(2,3);
   if(!items.length) return;   // never render "no events" text — just the title
   const wrap=el('div','events-list');
   let lastKey=null;
@@ -551,8 +577,16 @@ function renderContactPanel(){
     const phoneLine=el('div','crow-phone-line');
     phoneLine.append(phoneIcon());
     phoneLine.append(el('span','crow-phone', c.phone));
-    info.append(phoneLine);
-    row.append(info);
+    if(THEME==='light'){
+      // Reference shows the phone right-aligned on its own column, sibling
+      // of the role/name block — not stacked inside it. Dark theme keeps the
+      // original inline-stacked layout untouched.
+      row.append(info);
+      row.append(phoneLine);
+    } else {
+      info.append(phoneLine);
+      row.append(info);
+    }
     list.append(row);
   });
   panel.append(list);

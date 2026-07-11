@@ -337,7 +337,13 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    .rcard keeps its left accent border for the "distinct scripture panel"
    identity (established design intent from an earlier goal); only the
    full-box wash goes. */
-[data-theme="light"] .ecard{background:var(--color-surface)}
+/* Reference shows a flat list — no per-row card/border, just a thin divider
+   between rows, matching the reference's flat list style. Replaces the
+   dark-theme-only surface-2 tint (was: background:var(--color-surface)). */
+[data-theme="light"] .ecard{
+  border:none;border-radius:0;background:transparent;
+  padding:var(--s2) 0;border-bottom:1px solid var(--color-border)}
+[data-theme="light"] .ecard:last-child{border-bottom:none}
 [data-theme="light"] .rcard{background:transparent}
 /* Correction: the reference actually shows the Arabic prayer name as a
    small gray label (like the English name it sits next to), not black
@@ -361,7 +367,7 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 /* Contact role labels ("Imam & Khatib" etc.) are informational labels, not
    accent elements — near-black bold, matching the other label conversions
    above. */
-[data-theme="light"] .crow-role{color:var(--color-foreground);font-weight:700}
+[data-theme="light"] .crow-role{color:var(--color-foreground);font-weight:700;white-space:nowrap}
 /* Jama'ah pill: reference shows a light peach/cream background with
    terracotta text, not a solid terracotta fill — the solid glow-gold fill
    was the dark-theme treatment leaking through unscoped. */
@@ -371,3 +377,20 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    — the left accent border already carries the "distinct scripture panel"
    identity, so removing colour from the verse text alone doesn't lose that. */
 [data-theme="light"] .rcard .arabic{color:var(--color-foreground)}
+/* English is now the primary/first name (kiosk.js appends it first in light
+   theme) — bump it to the size Arabic used to have, and shrink Arabic to the
+   secondary size, so the visual weight matches the new reading order instead
+   of the larger text still being the second (Arabic) element on the row.
+   Dark theme keeps its original text-sm/text-xs split untouched. */
+[data-theme="light"] .prow-en{font-size:var(--text-sm)}
+[data-theme="light"] .prow-ar{font-size:var(--text-xs)}
+/* Contact panel: phone now renders as its own right-aligned column (sibling
+   of .crow-info, not nested inside it — kiosk.js) instead of stacked under
+   the name, and each of the 3 blocks (Imam/Management/WhatsApp) gets clear
+   vertical air instead of the previous cramped 8px/4px stacking. Role→name
+   gets a touch more room than the old 1px, short of the full row gap, so it
+   still visually pairs with its own name rather than the row below. */
+[data-theme="light"] .crow-info{gap:var(--s-half)}
+[data-theme="light"] .crow-phone-line{flex:0 0 auto;margin-left:auto}
+[data-theme="light"] .contact-list{gap:var(--s3)}
+[data-theme="light"] .wa-block{margin-top:var(--s3);padding-top:var(--s2)}
