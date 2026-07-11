@@ -24,7 +24,7 @@ const state = {
 // ---- Contact info: static, no Firestore collection backs this. ----
 // WhatsApp QR image asset not yet provided — see qrCodeSvg() below.
 const CONTACT = {
-  contactUs:  { role:"Contact Us",         phone:"+44 7535 545816",      email:"admin@dusunnah.com" },
+  imam:       { role:"Imam & Khatib",     name:"Abu Amarah",            phone:"020 7946 0111" },
   management: { role:"Masjid Management", name:"Daar Us Sunnah Office", phone:"020 7946 0958" },
   whatsapp:   { lead:"Message the Imam" },
 };
@@ -502,24 +502,7 @@ function qrPlaceholderSvg(){
 function renderContactPanel(){
   const list=$('#contactList'); list.innerHTML='';
 
-  // "Contact Us" row (was Imam & Khatib / Abu Amarah) has no personal name,
-  // so it doesn't fit the shared avatar+cname pattern below — rendered
-  // separately, on purpose, so Masjid Management's rendering stays untouched.
-  const cu=CONTACT.contactUs;
-  const cuRow=el('div','crow');
-  const cuInfo=el('div','cinfo');
-  cuInfo.append(el('div','crole', cu.role));
-  cuRow.append(cuInfo);
-  const cuMeta=el('div','cphone-stack');
-  const cuPhone=el('div','cphone');
-  cuPhone.append(phoneIcon());
-  cuPhone.append(document.createTextNode(cu.phone));
-  cuMeta.append(cuPhone);
-  cuMeta.append(el('div','cemail', cu.email));
-  cuRow.append(cuMeta);
-  list.append(cuRow);
-
-  [CONTACT.management].forEach(c=>{
+  [CONTACT.imam, CONTACT.management].forEach(c=>{
     const row=el('div','crow');
     row.append(el('div','avatar', initials(c.name)));
     const info=el('div','cinfo');
