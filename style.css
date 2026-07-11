@@ -310,13 +310,8 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
 /* Contact name/office line ("Abu Amarah", "Daar Us Sunnah Office") is gray,
    not black, in the reference — role label above it stays black bold. */
 [data-theme="light"] .crow-value{color:var(--color-muted)}
-/* WhatsApp value line is two spans (kiosk.js): .wa-lead ("Message the
-   Imam") + .wa-tail ("— scan to chat on WhatsApp"). .wa-tail needs no rule
-   of its own — it inherits .crow-value's gray above, matching the
-   reference's gray-regular tail. Dark theme is unaffected: neither span is
-   styled outside [data-theme="light"], so both inherit .crow-value's
-   shared foreground colour exactly as the single text node did before. */
-[data-theme="light"] .wa-lead{color:var(--color-gold);font-weight:700}
+/* .wa-lead/.wa-tail are dark-theme-only now (kiosk.js) — light theme's
+   WhatsApp block uses .wa-title/.wa-subtitle instead, styled below. */
 /* Retargeting --color-gold to the reference's brighter terracotta narrows
    this label's margin under its rgba(gold,.07) tint from 4.99:1 (old gold)
    to 4.17:1 — below the 4.5:1 floor for normal-weight small text. Bold
@@ -330,7 +325,10 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    nowrap+ellipsis pattern already used elsewhere in this file for
    fixed-width secondary text (.edesc/.eloc/.day-head). */
 [data-theme="light"] .wa-text{min-width:0}
-[data-theme="light"] .wa-text .crow-value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-theme="light"] .wa-title{font-family:var(--font-sans);font-size:var(--text-xs);font-weight:700;
+  color:var(--color-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-theme="light"] .wa-subtitle{font-family:var(--font-sans);font-size:var(--text-xs);font-weight:400;
+  color:var(--color-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Reference shows plain white/no tint on event row cards and the reminder
    box — the beige/pink tints here are dark-theme-only surface-2/gold-wash
    treatments that read as colour noise once the base palette is this light.
@@ -401,3 +399,15 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    ring arc (.ring-track/.ring-progress), Arabic name (.ring-name-ar) and
    English caption (#ring-name-en) — all separate selectors — are untouched. */
 [data-theme="light"] #ring-time{color:var(--color-foreground)}
+/* Text-hierarchy pass: event title/description had their weights inverted
+   (title regular, description bold-dark) relative to the intended
+   title=dark-bold / description=lighter-gray-regular pattern used
+   everywhere else on the board (contact role/name, panel titles). Base
+   rules (.en/.edesc, both unscoped) stay untouched for dark theme. */
+[data-theme="light"] .en{font-weight:700}
+[data-theme="light"] .edesc{color:var(--color-muted);font-weight:400}
+/* Day-badge number: explicit override of the earlier terracotta decision —
+   now dark bold, matching the title/label hierarchy. .edate-day (weekday/
+   month, e.g. "TUE") is unaffected — it already renders muted/gray, not
+   terracotta, so it needs no change here. */
+[data-theme="light"] .edate-num{color:var(--color-foreground);font-weight:700}

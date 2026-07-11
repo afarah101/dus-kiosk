@@ -604,12 +604,21 @@ function renderContactPanel(){
   qr.append(qrPlaceholderIcon());
   wa.append(qr);
   const waText=el('div','wa-text');
-  waText.append(el('div','crow-role', CONTACT.whatsapp.role));
-  const waValue=el('div','crow-value');
-  waValue.append(el('span','wa-lead', CONTACT.whatsapp.lead));
-  waValue.append(document.createTextNode(' '));
-  waValue.append(el('span','wa-tail', CONTACT.whatsapp.tail));
-  waText.append(waValue);
+  if(THEME==='light'){
+    // Reference drops the "WHATSAPP UPDATES" eyebrow label in favour of a
+    // stacked title (emoji + lead line) + subtitle, matching the title/
+    // description hierarchy used elsewhere on the board. Dark theme keeps
+    // its original role-label + inline lead/tail structure untouched.
+    waText.append(el('div','wa-title', '💬 ' + CONTACT.whatsapp.lead));
+    waText.append(el('div','wa-subtitle', 'Scan to chat on WhatsApp'));
+  } else {
+    waText.append(el('div','crow-role', CONTACT.whatsapp.role));
+    const waValue=el('div','crow-value');
+    waValue.append(el('span','wa-lead', CONTACT.whatsapp.lead));
+    waValue.append(document.createTextNode(' '));
+    waValue.append(el('span','wa-tail', CONTACT.whatsapp.tail));
+    waText.append(waValue);
+  }
   waText.append(el('div','crow-phone', 'QR image pending'));
   wa.append(waText);
   panel.append(wa);
