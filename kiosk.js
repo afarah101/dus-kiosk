@@ -33,7 +33,7 @@ const state = {
 const CONTACT = {
   imam:       { role:"Imam & Khatib",     name:"Abu Amarah",            phone:"020 7946 0111" },
   management: { role:"Masjid Management", name:"Daar Us Sunnah Office", phone:"020 7946 0958" },
-  whatsapp:   { role:"WhatsApp Updates",  lead:"Message the Imam", tail:"— scan to chat on WhatsApp" },
+  whatsapp:   { role:"WhatsApp Updates",  value:"Message the Imam — scan to chat on WhatsApp" },
 };
 
 // ---- HARDCODED verses (Muhsin Khan English). Arabic on top, translation below. ----
@@ -563,11 +563,7 @@ function renderContactPanel(){
   wa.append(qr);
   const waText=el('div','wa-text');
   waText.append(el('div','crow-role', CONTACT.whatsapp.role));
-  const waValue=el('div','crow-value');
-  waValue.append(el('span','wa-lead', CONTACT.whatsapp.lead));
-  waValue.append(document.createTextNode(' '));
-  waValue.append(el('span','wa-tail', CONTACT.whatsapp.tail));
-  waText.append(waValue);
+  waText.append(el('div','crow-value', CONTACT.whatsapp.value));
   waText.append(el('div','crow-phone', 'QR image pending'));
   wa.append(waText);
   panel.append(wa);

@@ -308,15 +308,14 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    real reference screenshot. */
 [data-theme="light"] .crow-phone{color:var(--color-gold)}
 /* Contact name/office line ("Abu Amarah", "Daar Us Sunnah Office") is gray,
-   not black, in the reference — role label above it stays black bold. */
+   not black, in the reference — role label above it stays black bold. This
+   also covers the WhatsApp value line ("Message the Imam — scan to chat on
+   WhatsApp"), which the reference actually splits into a terracotta-bold
+   lead phrase + gray-regular tail; a single colour is the closest this
+   file's CSS-only scope can get without restructuring that string into two
+   spans in kiosk.js (out of this goal's file-scope lock) — flagged for a
+   follow-up goal if the two-tone split is wanted exactly. */
 [data-theme="light"] .crow-value{color:var(--color-muted)}
-/* WhatsApp value line is two spans (kiosk.js): .wa-lead ("Message the
-   Imam") + .wa-tail ("— scan to chat on WhatsApp"). .wa-tail needs no rule
-   of its own — it inherits .crow-value's gray above, matching the
-   reference's gray-regular tail. Dark theme is unaffected: neither span is
-   styled outside [data-theme="light"], so both inherit .crow-value's
-   shared foreground colour exactly as the single text node did before. */
-[data-theme="light"] .wa-lead{color:var(--color-gold);font-weight:700}
 /* Retargeting --color-gold to the reference's brighter terracotta narrows
    this label's margin under its rgba(gold,.07) tint from 4.99:1 (old gold)
    to 4.17:1 — below the 4.5:1 floor for normal-weight small text. Bold
