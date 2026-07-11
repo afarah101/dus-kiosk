@@ -438,7 +438,15 @@ function weekEventsForDisplay(perDayCap, totalDaysCap){
   const selected=[];
   if(dayKeys.includes(todayKey)) selected.push(todayKey);
   for(const k of weekendKeys) if(!selected.includes(k)) selected.push(k);
-  for(const k of dayKeys) if(!selected.includes(k) && selected.length<totalDaysCap) selected.push(k);
+  // Only backfill with extra, non-priority weekdays if today+weekend didn't
+  // already give at least 2 distinct days (e.g. no Sat/Sun data yet this
+  // week). Once the weekend itself is already represented, pulling in a 3rd
+  // unrelated day just adds noise beyond "3 events / all weekend events" —
+  // it doesn't help either goal, it just doesn't hurt: the original
+  // `selected.length<totalDaysCap` check let this loop keep adding days
+  // right up to totalDaysCap even when today+weekend alone already covered
+  // everything asked for.
+  for(const k of dayKeys) if(!selected.includes(k) && selected.length<2) selected.push(k);
   const selectedSet=new Set(selected.slice(0,totalDaysCap));
 
   const items=[];
