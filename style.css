@@ -4,6 +4,11 @@
    cream, [data-theme="light"]). Layout + type scale rebuilt for fixed
    quadrant panels instead of full-screen slides. Strict 8pt spacing grid.
    No animation. */
+/* Inter isn't in index.html's existing Google Fonts <link> (Cormorant
+   Garamond/DM Sans/Amiri Quran only) — loaded here via @import instead of
+   editing index.html, which is outside this goal's file scope. Weights
+   match the four actually used across the stylesheet (400/500/600/700). */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 :root, [data-theme="dark"]{
   /* ---- colour: dark theme (charcoal + gold) ---- */
   --color-background:#2E2E2E;
@@ -57,9 +62,13 @@
 [data-theme="light"]{
   /* Light theme: single sans-serif everywhere per the reference — this must
      come after the shared :root block above (same selector specificity,
-     later source wins) so it overrides --font-serif for light only. Dark
-     theme keeps Cormorant Garamond untouched. */
-  --font-serif:var(--font-sans);
+     later source wins) so it overrides both font tokens for light only.
+     Dark theme keeps Cormorant Garamond/DM Sans untouched. Applied to both
+     --font-serif and --font-sans (not just an alias to the shared DM Sans
+     token) so headers, body, and numerals all genuinely render Inter, per
+     the exact requested stack. */
+  --font-serif:'Inter',-apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-sans:'Inter',-apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
