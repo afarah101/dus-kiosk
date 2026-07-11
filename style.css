@@ -38,7 +38,8 @@
   --color-gold-bright:#D97A4D;
   --color-gold-deep:#8C3D1E;
   --color-on-gold:#FFFFFF;
-  --body-bg:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#F7F3EE 55%,#F0E7D8 100%);
+  /* Reference shows a flat cream background, no visible gradient wash. */
+  --body-bg:var(--color-background);
   --shadow-card:0 8px 24px rgba(28,18,8,.10);
 }
 :root{
@@ -301,9 +302,20 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    large-text 3:1 floor even at normal weight (verified, not assumed). */
 [data-theme="light"] #date-line,
 [data-theme="light"] #date-ar{color:var(--color-gold)}
-/* Contact phone number is body/detail text, not a label — near-black like
-   the rest of body copy, not accent-tinted. */
-[data-theme="light"] .crow-phone{color:var(--color-foreground)}
+/* Correction: the reference actually shows the phone number in terracotta,
+   not near-black — reverting the previous goal's "body text = neutral"
+   call for this specific element now that it's been checked against the
+   real reference screenshot. */
+[data-theme="light"] .crow-phone{color:var(--color-gold)}
+/* Contact name/office line ("Abu Amarah", "Daar Us Sunnah Office") is gray,
+   not black, in the reference — role label above it stays black bold. This
+   also covers the WhatsApp value line ("Message the Imam — scan to chat on
+   WhatsApp"), which the reference actually splits into a terracotta-bold
+   lead phrase + gray-regular tail; a single colour is the closest this
+   file's CSS-only scope can get without restructuring that string into two
+   spans in kiosk.js (out of this goal's file-scope lock) — flagged for a
+   follow-up goal if the two-tone split is wanted exactly. */
+[data-theme="light"] .crow-value{color:var(--color-muted)}
 /* Retargeting --color-gold to the reference's brighter terracotta narrows
    this label's margin under its rgba(gold,.07) tint from 4.99:1 (old gold)
    to 4.17:1 — below the 4.5:1 floor for normal-weight small text. Bold
@@ -326,15 +338,35 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    full-box wash goes. */
 [data-theme="light"] .ecard{background:var(--color-surface)}
 [data-theme="light"] .rcard{background:transparent}
-/* Arabic prayer names read as label/body text here, not an accent focal
-   point (that's the ring's Arabic name, a different panel) — near-black
-   bold like the rest of the row, including the active row: the "next"
-   status is already conveyed by the row highlight, tag, and English
-   caption/time colour, so the Arabic script stays visually uniform across
-   all rows instead of also changing colour when active. */
-[data-theme="light"] .prow-ar,
-[data-theme="light"] .prow.next .prow-ar{color:var(--color-foreground);font-weight:700}
+/* Correction: the reference actually shows the Arabic prayer name as a
+   small gray label (like the English name it sits next to), not black
+   bold — the base .prow-ar rule already renders muted/gray by default, so
+   only the active row needs an override here, since the shared rule turns
+   it gold specifically when the row is .next. */
+[data-theme="light"] .prow.next .prow-ar{color:var(--color-muted)}
+/* Reference shows the English prayer name as black, regular weight (not
+   the shared rule's uppercase gray) — and black+bold specifically on the
+   active row, alongside its time, matching the row's own peach highlight
+   instead of a separate gold tint. */
+[data-theme="light"] .prow-en{color:var(--color-foreground)}
+[data-theme="light"] .prow.next .prow-en,
+[data-theme="light"] .prow.next .prow-time{color:var(--color-foreground);font-weight:700}
+/* "NEXT"/"FRI" are plain small muted text in the reference, not a coloured
+   pill/badge — same treatment whether or not the row itself is also
+   highlighted as active. */
+[data-theme="light"] .prow-tag,
+[data-theme="light"] .prow.next .prow-tag{
+  color:var(--color-muted);background:none;border:none;padding:0}
 /* Contact role labels ("Imam & Khatib" etc.) are informational labels, not
    accent elements — near-black bold, matching the other label conversions
    above. */
 [data-theme="light"] .crow-role{color:var(--color-foreground);font-weight:700}
+/* Jama'ah pill: reference shows a light peach/cream background with
+   terracotta text, not a solid terracotta fill — the solid glow-gold fill
+   was the dark-theme treatment leaking through unscoped. */
+[data-theme="light"] #jamaa-trigger{
+  color:var(--color-gold);background:rgba(var(--color-gold-rgb),.14);box-shadow:none}
+/* Reference shows the Qur'an Arabic verse itself in black, not terracotta
+   — the left accent border already carries the "distinct scripture panel"
+   identity, so removing colour from the verse text alone doesn't lose that. */
+[data-theme="light"] .rcard .arabic{color:var(--color-foreground)}
