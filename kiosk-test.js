@@ -24,7 +24,7 @@ const state = {
 // ---- Contact info: static, no Firestore collection backs this. ----
 // WhatsApp QR image asset not yet provided — see qrCodeSvg() below.
 const CONTACT = {
-  contactUs:  { role:"Contact Us",         phone:"+44 7535 545816",      email:"admin@dusunnah.com" },
+  contactUs:  { role:"Contact Us", subtitle:"Masjid Admin", avatar:"AD", phone:"+44 7535 545816", email:"admin@dusunnah.com" },
   management: { role:"Masjid Management", name:"Daar Us Sunnah Office", phone:"020 7946 0958" },
   whatsapp:   { lead:"Message the Imam" },
 };
@@ -485,13 +485,16 @@ function whatsappIcon(){
 function renderContactPanel(){
   const list=$('#contactList'); list.innerHTML='';
 
-  // "Contact Us" row (was Imam & Khatib / Abu Amarah) has no personal name,
-  // so it doesn't fit the shared avatar+cname pattern below — rendered
-  // separately, on purpose, so Masjid Management's rendering stays untouched.
+  // "Contact Us" row uses the same avatar+crole+cname structure as Masjid
+  // Management below, but still rendered separately (not folded into that
+  // shared forEach) because it also carries a second, stacked email line
+  // (.cphone-stack/.cemail) that Masjid Management's row doesn't have.
   const cu=CONTACT.contactUs;
   const cuRow=el('div','crow');
+  cuRow.append(el('div','avatar', cu.avatar));
   const cuInfo=el('div','cinfo');
   cuInfo.append(el('div','crole', cu.role));
+  cuInfo.append(el('div','cname', cu.subtitle));
   cuRow.append(cuInfo);
   const cuMeta=el('div','cphone-stack');
   const cuPhone=el('div','cphone');
