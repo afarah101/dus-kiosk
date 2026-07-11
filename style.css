@@ -318,3 +318,23 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
    fixed-width secondary text (.edesc/.eloc/.day-head). */
 [data-theme="light"] .wa-text{min-width:0}
 [data-theme="light"] .wa-text .crow-value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Reference shows plain white/no tint on event row cards and the reminder
+   box — the beige/pink tints here are dark-theme-only surface-2/gold-wash
+   treatments that read as colour noise once the base palette is this light.
+   .rcard keeps its left accent border for the "distinct scripture panel"
+   identity (established design intent from an earlier goal); only the
+   full-box wash goes. */
+[data-theme="light"] .ecard{background:var(--color-surface)}
+[data-theme="light"] .rcard{background:transparent}
+/* Arabic prayer names read as label/body text here, not an accent focal
+   point (that's the ring's Arabic name, a different panel) — near-black
+   bold like the rest of the row, including the active row: the "next"
+   status is already conveyed by the row highlight, tag, and English
+   caption/time colour, so the Arabic script stays visually uniform across
+   all rows instead of also changing colour when active. */
+[data-theme="light"] .prow-ar,
+[data-theme="light"] .prow.next .prow-ar{color:var(--color-foreground);font-weight:700}
+/* Contact role labels ("Imam & Khatib" etc.) are informational labels, not
+   accent elements — near-black bold, matching the other label conversions
+   above. */
+[data-theme="light"] .crow-role{color:var(--color-foreground);font-weight:700}
