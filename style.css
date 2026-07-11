@@ -28,10 +28,10 @@
   --color-border:#E4D8C6;
   --color-foreground:#1C1208;
   --color-muted:#8A7862;
-  --color-gold:#A8501A;
-  --color-gold-rgb:168,80,26;
-  --color-gold-bright:#C36A34;
-  --color-gold-deep:#7A3812;
+  --color-gold:#C1552C;
+  --color-gold-rgb:193,85,44;
+  --color-gold-bright:#D97A4D;
+  --color-gold-deep:#8C3D1E;
   --color-on-gold:#FFFFFF;
   --body-bg:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#F7F3EE 55%,#F0E7D8 100%);
   --shadow-card:0 8px 24px rgba(28,18,8,.10);
@@ -53,6 +53,13 @@
   /* ---- radius / elevation (radius same in both themes; shadow/glow are per-theme above) ---- */
   --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
   --glow-gold:0 16px 48px -16px rgba(var(--color-gold-rgb),.55);
+}
+[data-theme="light"]{
+  /* Light theme: single sans-serif everywhere per the reference — this must
+     come after the shared :root block above (same selector specificity,
+     later source wins) so it overrides --font-serif for light only. Dark
+     theme keeps Cormorant Garamond untouched. */
+  --font-serif:var(--font-sans);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -272,3 +279,33 @@ header#topbar{display:flex;align-items:center;justify-content:space-between;
   border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:var(--color-gold)}
 .qr-icon{width:60%;height:60%}
 .wa-text{flex:1 1 auto}
+
+/* ---------- light theme: header/accent/body overrides (reference parity) ---------- */
+/* Section headers go near-black sentence-case (not gold/uppercase) in light
+   theme; markup already carries the real-case text, so removing the
+   transform is enough. Dark theme's gold/uppercase panel titles are
+   untouched — this block only ever matches under [data-theme="light"]. */
+[data-theme="light"] .panel-title{color:var(--color-foreground);text-transform:none}
+/* Date/time in the header reads as accent (terracotta) rather than muted
+   gray in the reference, unlike dark theme's deliberately-secondary muted
+   treatment — both text-sm (>=24px at 1080p), so this still clears the
+   large-text 3:1 floor even at normal weight (verified, not assumed). */
+[data-theme="light"] #date-line,
+[data-theme="light"] #date-ar{color:var(--color-gold)}
+/* Contact phone number is body/detail text, not a label — near-black like
+   the rest of body copy, not accent-tinted. */
+[data-theme="light"] .crow-phone{color:var(--color-foreground)}
+/* Retargeting --color-gold to the reference's brighter terracotta narrows
+   this label's margin under its rgba(gold,.07) tint from 4.99:1 (old gold)
+   to 4.17:1 — below the 4.5:1 floor for normal-weight small text. Bold
+   promotes it into the large-text-bold 3:1 exemption instead (same pattern
+   used elsewhere in this file for small badge/label text). */
+[data-theme="light"] .rcard .kicker{font-weight:700}
+/* DM Sans renders wider than Cormorant Garamond did here, so the WhatsApp
+   caption wraps to a 2nd line and pushes the Contact panel 9px past its
+   fixed height (measured, not assumed) — truncate to the single line the
+   fixed-height panel was actually built for, matching the same
+   nowrap+ellipsis pattern already used elsewhere in this file for
+   fixed-width secondary text (.edesc/.eloc/.day-head). */
+[data-theme="light"] .wa-text{min-width:0}
+[data-theme="light"] .wa-text .crow-value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
