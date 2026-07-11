@@ -1,6 +1,7 @@
 // Masjid Daar Us Sunnah — entrance signage TV controller.
 // Static 6-panel community board (topbar + Next Prayer ring, Upcoming Events,
 // Prayer Times list, Daily Reminder, Contact Information). No slide rotation.
+// Single unified theme (designer mockup) — no dark theme, no [data-theme].
 // Live from Firestore: prayerTimes, oneOffEvents, lessons. Verses are HARDCODED — see VERSES below.
 //
 // Firestore structure (path logged on read):
@@ -12,15 +13,7 @@ import { getFirestore, doc, getDoc, collection, getDocs }
   from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const LOG = '[kiosk]';
-const REMINDER_ROTATE_MS = 15000;   // Daily Reminder panel now advances on its own timer (was slide-driven)
-
-// ---- theme: light (DUS App v5 terracotta/cream) is the sole permanent theme. ----
-// Dark theme's CSS block stays in style.css in case it's wanted again later,
-// but nothing here can select it — no default, no ?theme= override, no
-// time-of-day logic. Applied immediately (not waiting on DOMContentLoaded)
-// so there's no flash of the wrong theme on load.
-const THEME = 'light';
-document.documentElement.dataset.theme = THEME;
+const REMINDER_ROTATE_MS = 15000;   // Daily Reminder panel advances on its own timer
 
 const state = {
   prayer:  { data:null, error:null, path:null, sunrise:null },
@@ -29,40 +22,40 @@ const state = {
 };
 
 // ---- Contact info: static, no Firestore collection backs this. ----
-// WhatsApp QR image asset not yet provided — flagged as pending below, not fabricated.
+// WhatsApp QR image asset not yet provided — see qrCodeSvg() below.
 const CONTACT = {
   imam:       { role:"Imam & Khatib",     name:"Abu Amarah",            phone:"020 7946 0111" },
   management: { role:"Masjid Management", name:"Daar Us Sunnah Office", phone:"020 7946 0958" },
-  whatsapp:   { role:"WhatsApp Updates",  lead:"Message the Imam", tail:"— scan to chat on WhatsApp" },
+  whatsapp:   { lead:"Message the Imam" },
 };
 
 // ---- HARDCODED verses (Muhsin Khan English). Arabic on top, translation below. ----
 // Daily rotation Sun–Thu/Sat; Friday auto-trigger swaps to the Jumuʿah set.
 const VERSES_DAILY = [
-  { kicker:"The Noble Qur’an", ref:"Sūrah An-Nisā' [4:103]",
+  { ref:"Sūrah An-Nisā' [4:103]",
     ar:"فَإِذَا قَضَيْتُمُ ٱلصَّلَوٰةَ فَٱذْكُرُوا۟ ٱللَّهَ قِيَـٰمًۭا وَقُعُودًۭا وَعَلَىٰ جُنُوبِكُمْ ۚ فَإِذَا ٱطْمَأْنَنتُمْ فَأَقِيمُوا۟ ٱلصَّلَوٰةَ ۚ إِنَّ ٱلصَّلَوٰةَ كَانَتْ عَلَى ٱلْمُؤْمِنِينَ كِتَـٰبًۭا مَّوْقُوتًۭا",
     en:"When you have finished the Salat (prayer), remember Allah standing, sitting down, and lying down on your sides, but when you are free from danger, perform the Salat. Verily, the prayer is enjoined on the believers at fixed hours." },
-  { kicker:"The Noble Qur’an", ref:"Sūrah Al-Baqarah [2:153]",
+  { ref:"Sūrah Al-Baqarah [2:153]",
     ar:"يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا۟ ٱسْتَعِينُوا۟ بِٱلصَّبْرِ وَٱلصَّلَوٰةِ ۚ إِنَّ ٱللَّهَ مَعَ ٱلصَّـٰبِرِينَ",
     en:"O you who believe! Seek help in patience and the Salat (prayer). Truly, Allah is with the patient (As-Sabirin)." },
-  { kicker:"The Noble Qur’an", ref:"Sūrah Ar-Ra'd [13:28]",
+  { ref:"Sūrah Ar-Ra'd [13:28]",
     ar:"ٱلَّذِينَ ءَامَنُوا۟ وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ ٱللَّهِ ۗ أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ",
     en:"Those who believe, and whose hearts find rest in the remembrance of Allah. Verily, in the remembrance of Allah do hearts find rest." },
-  { kicker:"The Noble Qur’an", ref:"Sūrah Al-'Ankabūt [29:45]",
+  { ref:"Sūrah Al-'Ankabūt [29:45]",
     ar:"ٱتْلُ مَآ أُوحِىَ إِلَيْكَ مِنَ ٱلْكِتَـٰبِ وَأَقِمِ ٱلصَّلَوٰةَ ۖ إِنَّ ٱلصَّلَوٰةَ تَنْهَىٰ عَنِ ٱلْفَحْشَآءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ ۗ وَٱللَّهُ يَعْلَمُ مَا تَصْنَعُونَ",
     en:"Recite what has been revealed to you of the Book, and perform the Salat. Verily, the Salat prevents from Al-Fahsha (great sins) and Al-Munkar (evil deeds), and the remembering of Allah is greater. And Allah knows what you do." },
-  { kicker:"Du’ā · Entering the Mosque", ref:"Sahih Muslim 713",
+  { ref:"Sahih Muslim 713",
     ar:"اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
     en:"O Allah, open for me the doors of Your mercy." },
-  { kicker:"Du’ā · Leaving the Mosque", ref:"Sahih Muslim 713",
+  { ref:"Sahih Muslim 713",
     ar:"اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
     en:"O Allah, I ask You of Your favor." },
 ];
 const VERSES_FRIDAY = [
-  { kicker:"The Noble Qur’an", ref:"Sūrah Al-Jumuʿah [62:9]",
+  { ref:"Sūrah Al-Jumuʿah [62:9]",
     ar:"يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓا۟ إِذَا نُودِىَ لِلصَّلَوٰةِ مِن يَوْمِ ٱلْجُمُعَةِ فَٱسْعَوْا۟ إِلَىٰ ذِكْرِ ٱللَّهِ وَذَرُوا۟ ٱلْبَيْعَ ۚ ذَٰلِكُمْ خَيْرٌۭ لَّكُمْ إِن كُنتُمْ تَعْلَمُونَ",
     en:"O you who believe! When the call is proclaimed for the Salat (prayer) on Friday (Jumuʿah), come to the remembrance of Allah and leave off business. That is better for you if you did but know!" },
-  { kicker:"The Noble Qur’an", ref:"Sūrah Al-Aḥzāb [33:56]",
+  { ref:"Sūrah Al-Aḥzāb [33:56]",
     ar:"إِنَّ ٱللَّهَ وَمَلَـٰٓئِكَتَهُۥ يُصَلُّونَ عَلَى ٱلنَّبِىِّ ۚ يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا۟ صَلُّوا۟ عَلَيْهِ وَسَلِّمُوا۟ تَسْلِيمًا",
     en:"Allah sends His Salat (Graces, Honours, Blessings, Mercy) on the Prophet (Muhammad), and also His angels. O you who believe! Send your Salat on him, and greet him with the Islamic greeting." },
 ];
@@ -205,20 +198,15 @@ async function loadLessons(db){
 }
 
 // Combine one-off events + recurring weekly lessons into one chronologically sorted list,
-// windowed to the next 7 days (today through today+7). Previously there was no upper
-// bound at all — any future date qualified indefinitely — so events window is now the
-// one deliberate scope limit; lessons were never bounded by date either since they only
-// ever carried a computed .date, not an .iso string, so this now applies uniformly to both
-// via the same Date-object comparison instead of two different, inconsistent checks.
-// Lessons are projected onto their next real calendar occurrence; a lesson cancelled this
-// week rolls to the following week rather than showing a date it won't actually happen.
+// windowed to the next 7 days (today through today+7). Lessons are projected onto their
+// next real calendar occurrence; a lesson cancelled this week rolls to the following week
+// rather than showing a date it won't actually happen.
 // Firestore's lessons.desc field conflates description with teacher
 // attribution in one freeform sentence run (e.g. "Lesson in Russian. Taught
 // by Ustādh Abu Mūsā."), and there's no separate structured field to read
 // instead. Verified against all 11 real lesson docs: "Taught by ... ." always
 // appears as a clean trailing clause ending at the next period, so stripping
-// it is safe and doesn't touch genuine description text before it — this
-// must never leak the teacher name back into the Events panel display.
+// it is safe and doesn't touch genuine description text before it.
 function stripTeacherAttribution(desc){
   if(!desc) return null;
   const cleaned=String(desc).replace(/Taught by[^.]*\.?/gi,'').trim();
@@ -286,7 +274,8 @@ function computeSchedule(){
   return {rows,next,rollover,now};
 }
 
-const RING_R = 88, RING_C = 2*Math.PI*RING_R;
+// Ring geometry matches the mockup's SVG exactly (viewBox 0 0 240 240, r=112).
+const RING_R = 112, RING_C = 2*Math.PI*RING_R;
 // progress = how far through the window between the previous prayer and the next one
 function ringProgress(sched){
   if(!sched.next) return 0;
@@ -309,61 +298,52 @@ function ringProgress(sched){
 // ============================================================================
 //  PANEL RENDERERS — each panel is independent; empty data = title-only, never absence text
 // ============================================================================
-function panelTitle(txt){
-  const f=document.createDocumentFragment();
-  f.append(el('h2','panel-title',txt));
-  return f;
-}
-
 function renderRingPanel(){
-  const panel=$('#panel-ring'); panel.innerHTML='';
-  panel.append(panelTitle('Next Prayer'));
+  const panel=$('#panel-ring');
+  // Keep the static hero-eyebrow (first child, from index.html); rebuild only
+  // the dynamic ring/jamā'ah content beneath it.
+  while(panel.children.length>1) panel.removeChild(panel.lastChild);
   if(!state.prayer.data) return;
 
-  // Thin full-circle background track (low-opacity) with the progress arc
-  // drawn on top — no separate "NEXT" label (the panel title "NEXT PRAYER"
-  // already says that).
   const wrap=el('div','ring-wrap');
   const svgNS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(svgNS,'svg');
-  svg.setAttribute('viewBox','0 0 200 200'); svg.classList.add('ring-svg');
+  svg.setAttribute('viewBox','0 0 240 240'); svg.classList.add('ring'); svg.setAttribute('aria-hidden','true');
   const track=document.createElementNS(svgNS,'circle');
-  track.setAttribute('cx','100'); track.setAttribute('cy','100'); track.setAttribute('r',String(RING_R));
+  track.setAttribute('cx','120'); track.setAttribute('cy','120'); track.setAttribute('r',String(RING_R));
   track.classList.add('ring-track');
   const prog=document.createElementNS(svgNS,'circle');
-  prog.setAttribute('cx','100'); prog.setAttribute('cy','100'); prog.setAttribute('r',String(RING_R));
-  prog.classList.add('ring-progress'); prog.id='ring-progress';
+  prog.setAttribute('cx','120'); prog.setAttribute('cy','120'); prog.setAttribute('r',String(RING_R));
+  prog.classList.add('ring-prog'); prog.id='ringProg';
   prog.style.strokeDasharray=String(RING_C);
   svg.append(track,prog);
 
-  const inner=el('div','ring-inner');
-  const nameAr=ar('ring-name-ar',''); nameAr.id='ring-name-ar';
-  const time=el('div',null,'--:--:--'); time.id='ring-time';
-  const nameEn=el('div',null,''); nameEn.id='ring-name-en';
-  inner.append(nameAr,time,nameEn);
+  const center=el('div','ring-center');
+  const nameAr=ar('hero-ar',''); nameAr.id='cdAr';
+  const time=el('div','cd-time','0:00:00'); time.id='cdTime';
+  const nameEn=el('div','hero-en',''); nameEn.id='cdName';
+  center.append(nameAr,time,nameEn);
 
-  wrap.append(svg,inner);
+  wrap.append(svg,center);
+  panel.append(wrap);
 
-  const trg=el('div',null,''); trg.id='jamaa-trigger';
-
-  const content=el('div','ring-content');
-  content.append(wrap,trg);
-  panel.append(content);
+  const jam=el('div','hero-jam',''); jam.id='cdJam';
+  panel.append(jam);
 
   tickRing();
 }
 
 function tickRing(){
-  const ringTime=$('#ring-time'); if(!ringTime) return;   // ring not rendered (no prayer data)
+  const time=$('#cdTime'); if(!time) return;   // ring not rendered (no prayer data)
   const sched=computeSchedule();
-  const nameAr=$('#ring-name-ar'), nameEn=$('#ring-name-en');
-  const prog=$('#ring-progress'), trg=$('#jamaa-trigger');
-  if(!sched.next){ ringTime.textContent='--:--:--'; return; }
+  const nameAr=$('#cdAr'), nameEn=$('#cdName');
+  const prog=$('#ringProg'), trg=$('#cdJam');
+  if(!sched.next){ time.textContent='0:00:00'; return; }
   nameAr.textContent = sched.next.ar;
   nameEn.textContent = sched.rollover ? 'FIRST: '+sched.next.label.toUpperCase() : sched.next.label.toUpperCase();
   const diff=Math.max(0,Math.floor((sched.next.at.getTime()-Date.now())/1000));
   const h=Math.floor(diff/3600), m=Math.floor(diff%3600/60), s=diff%60;
-  ringTime.textContent = h===0 ? `${pad(m)}:${pad(s)}` : `${pad(h)}:${pad(m)}:${pad(s)}`;
+  time.textContent = (h>0?h+':':'')+pad(m)+':'+pad(s);
   if(prog) prog.style.strokeDashoffset = String(RING_C*(1-ringProgress(sched)));
   if(trg){
     const jAt = sched.next.iqama ? timeOnDate(new Date(),sched.next.iqama) : sched.next.at;
@@ -373,53 +353,28 @@ function tickRing(){
 }
 
 function renderPrayersPanel(){
-  const panel=$('#panel-prayers'); panel.innerHTML='';
-  panel.append(panelTitle('Prayer Times'));
+  const list=$('#prayerList'); list.innerHTML='';
   if(!state.prayer.data) return;
   const sched=computeSchedule();
-  const list=el('div','prayer-list');
-
-  // Single-column layout: prayer name + one time only. r.iqama is still
-  // computed by computeSchedule() from Firestore's jamā'ah fields (fj/zj/aj/
-  // ij) — the data keeps flowing, it's just not rendered on this row anymore.
   sched.rows.forEach(r=>{
-    const row=el('div','prow');
     const isNext = sched.next && r.id===sched.next.id && !sched.rollover;
-    if(isNext) row.classList.add('next');
-    else if(r.at && r.at.getTime()<sched.now && r.id!=='jumuah') row.classList.add('passed');
-    const name=el('div','prow-name');
-    // Light theme's reference shows English-first (Arabic as the smaller,
-    // secondary label) — dark theme's original Arabic-first order is
-    // preserved untouched since THEME never changes at runtime today, but
-    // this keeps that code path intact if it ever does.
-    if(THEME==='light'){
-      name.append(el('div','prow-en', r.label));
-      name.append(ar('prow-ar', r.ar));
-    } else {
-      name.append(ar('prow-ar', r.ar));
-      name.append(el('div','prow-en', r.label));
-    }
-    if(isNext) name.append(el('span','prow-tag','NEXT'));
-    // "FRI" next to Jumu'ah is redundant in the light-theme reference (every
-    // Jumu'ah row is inherently Friday) — dark theme keeps the tag.
-    if(r.id==='jumuah' && THEME!=='light') name.append(el('span','prow-tag','FRI'));
-    row.append(name);
-    row.append(el('div','prow-time', r.begin?fmt12(r.begin):'—'));
+    const row=el('div','prow'+(isNext?' next':'')+(r.id==='jumuah'?' jumuah':''));
+    const meta=el('div','pmeta');
+    meta.append(el('span','pname', r.label));
+    meta.append(ar('par', r.ar));
+    if(r.id==='jumuah') meta.append(el('span','fritag','Fri'));
+    if(isNext) meta.append(el('span','pill-next','Next'));
+    row.append(meta);
+    row.append(el('span','ptime', r.begin?fmt12(r.begin):'—'));
     list.append(row);
   });
-  panel.append(list);
 }
 
 // Caps items per day (not just a flat total) so a single busy day can't crowd the
 // rest of the week out of a fixed-height panel — combinedSchedule() already windows
-// to 7 days. Real capacity only fits ~3 distinct days at 1080p (measured: 4 distinct
-// days overflows by 60-70px with real content, and style.css is out of scope here),
-// so with 4+ relevant days in a typical week something has to be left out. Rather than
-// always taking the chronologically-first days (which silently drops the weekend if
-// enough near-term weekdays are busy — the exact bug reported), today + the upcoming
-// Saturday/Sunday are prioritized first, since a parent checking this board on any
-// weekday still needs to see what's on this weekend; remaining slots fill with the
-// nearest other weekdays.
+// to 7 days. Today + the upcoming Saturday/Sunday are prioritized first, since a
+// parent checking this board on any weekday still needs to see what's on this
+// weekend; remaining slots fill with the nearest other weekdays.
 function weekEventsForDisplay(perDayCap, totalDaysCap){
   const all=combinedSchedule();   // already 7-day windowed & chronologically sorted
   const byDay=new Map();
@@ -438,14 +393,6 @@ function weekEventsForDisplay(perDayCap, totalDaysCap){
   const selected=[];
   if(dayKeys.includes(todayKey)) selected.push(todayKey);
   for(const k of weekendKeys) if(!selected.includes(k)) selected.push(k);
-  // Only backfill with extra, non-priority weekdays if today+weekend didn't
-  // already give at least 2 distinct days (e.g. no Sat/Sun data yet this
-  // week). Once the weekend itself is already represented, pulling in a 3rd
-  // unrelated day just adds noise beyond "3 events / all weekend events" —
-  // it doesn't help either goal, it just doesn't hurt: the original
-  // `selected.length<totalDaysCap` check let this loop keep adding days
-  // right up to totalDaysCap even when today+weekend alone already covered
-  // everything asked for.
   for(const k of dayKeys) if(!selected.includes(k) && selected.length<2) selected.push(k);
   const selectedSet=new Set(selected.slice(0,totalDaysCap));
 
@@ -458,71 +405,47 @@ function weekEventsForDisplay(perDayCap, totalDaysCap){
 }
 
 function renderEventsPanel(){
-  const panel=$('#panel-events'); panel.innerHTML='';
-  panel.append(panelTitle('Upcoming Events'));
+  const list=$('#eventsList'); list.innerHTML='';
   // perDayCap=2 so a weekend day with more than one event isn't silently
   // truncated to a single item; totalDaysCap=3 guarantees 3 events display
-  // even when the weekend itself only carries 1-2 (as observed live: 1 on
-  // Sat, 1 on Sun). Row borders were removed in favour of thin dividers
-  // (style.css) specifically to free the vertical room this needs — the
-  // previous 1/2 caps were a measured, real overflow constraint at the time,
-  // not an arbitrary choice, but that constraint no longer holds now that
-  // rows are flat dividers instead of bordered/padded cards.
+  // even when the weekend itself only carries 1-2.
   const items=weekEventsForDisplay(2,3);
-  if(!items.length) return;   // never render "no events" text — just the title
-  const wrap=el('div','events-list');
-  let lastKey=null;
   items.forEach(item=>{
-    const key=localDateKey(item.date);
-    if(key!==lastKey){
-      wrap.append(el('div','day-head', item.date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})));
-      lastKey=key;
-    }
-    const c=el('div','ecard');
+    const wd=item.date.toLocaleDateString('en-GB',{weekday:'short'});
+    const mo=item.date.toLocaleDateString('en-GB',{month:'short'});
+    const row=el('div','event');
 
-    const badge=el('div','edate-badge');
-    badge.append(el('div','edate-day', item.date.toLocaleDateString('en-GB',{weekday:'short'}).toUpperCase()));
-    badge.append(el('div','edate-num', String(item.date.getDate())));
-    c.append(badge);
+    const dateBox=el('div','edate');
+    dateBox.append(el('div','ewd', `${wd} ${mo}`));
+    dateBox.append(el('div','eday', String(item.date.getDate())));
+    row.append(dateBox);
 
-    const content=el('div','econtent');
-    // Title + description only — no separate language/audience tag, since it
-    // was always redundant with the description that already says the same
-    // thing (e.g. "IN RUSSIAN" badge next to a "Lesson in Russian." line).
-    content.append(el('div','en', item.title));
-    if(item.desc) content.append(el('div','edesc', item.desc));
-    c.append(content);
+    const info=el('div','einfo');
+    info.append(el('div','etitle', item.title));
+    if(item.desc) info.append(el('div','edesc', item.desc));
+    row.append(info);
 
-    // time + location: own right-aligned zone, sibling of econtent (not
-    // nested inside it) so it forms a distinct 3rd column per the reference
-    // layout. Deliberately no teacher/speaker text on this panel (still read
-    // from Firestore, just not rendered here). Lessons have no `location`
-    // field in Firestore (verified against the live schema) — left blank
-    // rather than fabricated.
+    // Lessons have no `location` field in Firestore (verified against the
+    // live schema) — locationForTitle() always resolves one anyway, so this
+    // branch is effectively always populated for both events and lessons.
     if(item.time || item.location){
       const meta=el('div','emeta');
       if(item.time) meta.append(el('div','etime', String(item.time)));
       if(item.location) meta.append(el('div','eloc', item.location));
-      c.append(meta);
+      row.append(meta);
     }
-    wrap.append(c);
+    list.append(row);
   });
-  panel.append(wrap);
 }
 
 function renderReminderPanel(){
-  const panel=$('#panel-reminder'); panel.innerHTML='';
   const isFriday=new Date().getDay()===5;
-  panel.append(panelTitle(isFriday ? 'Jumuʿah Reminder' : 'Daily Reminder'));
+  const title=$('#reminderTitle'); if(title) title.textContent = isFriday ? 'Jumuʿah Reminder' : 'Daily Reminder';
   const set=versesForToday();
   const v=set[verseIndex % set.length];
-  const card=el('div','rcard');
-  card.append(el('div','kicker', v.kicker));
-  card.append(ar('arabic', v.ar));
-  card.append(el('div','divider'));
-  card.append(el('div','body', '“'+v.en+'”'));
-  card.append(el('div','ref', '— '+v.ref));
-  panel.append(card);
+  $('#remAr').textContent = v.ar;
+  $('#remTr').textContent = '“'+v.en+'”';
+  $('#remRef').textContent = '— '+v.ref;
 }
 function advanceReminder(){
   verseIndex = (verseIndex+1) % versesForToday().length;
@@ -537,105 +460,90 @@ function initials(name){
   return words.slice(0,2).map(w=>w[0].toUpperCase()).join('') || '?';
 }
 
-// Feather Icons "phone" glyph (MIT licensed), stroke-based to match the
-// existing QR placeholder's currentColor convention.
+// Feather Icons "phone" glyph (MIT licensed).
 function phoneIcon(){
   const svgNS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(svgNS,'svg');
-  svg.setAttribute('viewBox','0 0 24 24'); svg.classList.add('phone-icon');
+  svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('aria-hidden','true');
   const path=document.createElementNS(svgNS,'path');
   path.setAttribute('d','M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z');
-  path.setAttribute('fill','none'); path.setAttribute('stroke','currentColor'); path.setAttribute('stroke-width','2');
-  path.setAttribute('stroke-linecap','round'); path.setAttribute('stroke-linejoin','round');
   svg.append(path);
   return svg;
 }
 
-// Generic "QR" glyph (finder-pattern corners) — NOT a functional scannable code.
-// No WhatsApp QR image asset has been provided yet; this is a flagged placeholder,
-// not a fabricated code. Replace with a real <img> once the asset exists.
-function qrPlaceholderIcon(){
+// WhatsApp glyph (from the designer mockup, verbatim).
+function whatsappIcon(){
   const svgNS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(svgNS,'svg');
-  svg.setAttribute('viewBox','0 0 48 48'); svg.classList.add('qr-icon');
-  [[4,4],[30,4],[4,30]].forEach(([x,y])=>{
-    const outer=document.createElementNS(svgNS,'rect');
-    outer.setAttribute('x',x); outer.setAttribute('y',y); outer.setAttribute('width',14); outer.setAttribute('height',14);
-    outer.setAttribute('fill','none'); outer.setAttribute('stroke','currentColor'); outer.setAttribute('stroke-width','2');
-    svg.append(outer);
-    const inner=document.createElementNS(svgNS,'rect');
-    inner.setAttribute('x',x+4); inner.setAttribute('y',y+4); inner.setAttribute('width',6); inner.setAttribute('height',6);
-    inner.setAttribute('fill','currentColor');
-    svg.append(inner);
-  });
+  svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('aria-hidden','true');
+  const path=document.createElementNS(svgNS,'path');
+  path.setAttribute('d','M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.7-.1-.4-.1-.9-.3-1.6-.6-2.8-1.2-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 .9-2.2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.4 0 .5l-.4.5c-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.2.1.4.1.6-.1l.7-.9c.2-.2.4-.2.6-.1l1.8.9c.3.1.5.2.5.3.1.1.1.7-.1 1.3z');
+  svg.append(path);
+  return svg;
+}
+
+// QR pattern from the designer mockup, verbatim (a hand-authored 25x25
+// finder-pattern-style glyph, NOT a decoded/verified real WhatsApp deep
+// link — no QR asset that genuinely scans to a working chat has been
+// provided yet, so this stays a visual placeholder only, exactly as the
+// original "QR image pending" note flagged before this rewrite).
+function qrPlaceholderSvg(){
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox','0 0 25 25'); svg.setAttribute('role','img');
+  svg.setAttribute('aria-label','WhatsApp QR placeholder — not yet a working scan target');
+  const path=document.createElementNS(svgNS,'path');
+  path.setAttribute('fill','#1c1208');
+  path.setAttribute('d','M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM11 0h1v1h-1zM12 0h1v1h-1zM14 0h1v1h-1zM18 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM21 0h1v1h-1zM22 0h1v1h-1zM23 0h1v1h-1zM24 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM9 1h1v1h-1zM11 1h1v1h-1zM13 1h1v1h-1zM14 1h1v1h-1zM15 1h1v1h-1zM16 1h1v1h-1zM18 1h1v1h-1zM24 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM8 2h1v1h-1zM9 2h1v1h-1zM10 2h1v1h-1zM12 2h1v1h-1zM14 2h1v1h-1zM16 2h1v1h-1zM18 2h1v1h-1zM20 2h1v1h-1zM21 2h1v1h-1zM22 2h1v1h-1zM24 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM10 3h1v1h-1zM11 3h1v1h-1zM12 3h1v1h-1zM13 3h1v1h-1zM15 3h1v1h-1zM16 3h1v1h-1zM18 3h1v1h-1zM20 3h1v1h-1zM21 3h1v1h-1zM22 3h1v1h-1zM24 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM11 4h1v1h-1zM12 4h1v1h-1zM14 4h1v1h-1zM18 4h1v1h-1zM20 4h1v1h-1zM21 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM10 5h1v1h-1zM11 5h1v1h-1zM15 5h1v1h-1zM18 5h1v1h-1zM24 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM19 6h1v1h-1zM20 6h1v1h-1zM21 6h1v1h-1zM22 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM8 7h1v1h-1zM9 7h1v1h-1zM12 7h1v1h-1zM15 7h1v1h-1zM16 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM9 8h1v1h-1zM11 8h1v1h-1zM13 8h1v1h-1zM15 8h1v1h-1zM16 8h1v1h-1zM18 8h1v1h-1zM19 8h1v1h-1zM20 8h1v1h-1zM21 8h1v1h-1zM22 8h1v1h-1zM0 9h1v1h-1zM3 9h1v1h-1zM4 9h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM11 9h1v1h-1zM14 9h1v1h-1zM19 9h1v1h-1zM23 9h1v1h-1zM0 10h1v1h-1zM2 10h1v1h-1zM6 10h1v1h-1zM15 10h1v1h-1zM18 10h1v1h-1zM19 10h1v1h-1zM20 10h1v1h-1zM21 10h1v1h-1zM23 10h1v1h-1zM24 10h1v1h-1zM0 11h1v1h-1zM1 11h1v1h-1zM4 11h1v1h-1zM7 11h1v1h-1zM11 11h1v1h-1zM12 11h1v1h-1zM15 11h1v1h-1zM16 11h1v1h-1zM17 11h1v1h-1zM18 11h1v1h-1zM19 11h1v1h-1zM24 11h1v1h-1zM2 12h1v1h-1zM3 12h1v1h-1zM4 12h1v1h-1zM5 12h1v1h-1zM6 12h1v1h-1zM7 12h1v1h-1zM8 12h1v1h-1zM11 12h1v1h-1zM12 12h1v1h-1zM13 12h1v1h-1zM15 12h1v1h-1zM16 12h1v1h-1zM18 12h1v1h-1zM19 12h1v1h-1zM20 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM24 12h1v1h-1zM0 13h1v1h-1zM2 13h1v1h-1zM5 13h1v1h-1zM7 13h1v1h-1zM9 13h1v1h-1zM10 13h1v1h-1zM12 13h1v1h-1zM13 13h1v1h-1zM14 13h1v1h-1zM19 13h1v1h-1zM21 13h1v1h-1zM23 13h1v1h-1zM0 14h1v1h-1zM3 14h1v1h-1zM4 14h1v1h-1zM6 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM12 14h1v1h-1zM15 14h1v1h-1zM16 14h1v1h-1zM17 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM21 14h1v1h-1zM23 14h1v1h-1zM24 14h1v1h-1zM0 15h1v1h-1zM2 15h1v1h-1zM4 15h1v1h-1zM5 15h1v1h-1zM9 15h1v1h-1zM12 15h1v1h-1zM14 15h1v1h-1zM16 15h1v1h-1zM19 15h1v1h-1zM20 15h1v1h-1zM24 15h1v1h-1zM0 16h1v1h-1zM3 16h1v1h-1zM4 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM7 16h1v1h-1zM8 16h1v1h-1zM13 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM18 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM22 16h1v1h-1zM8 17h1v1h-1zM10 17h1v1h-1zM11 17h1v1h-1zM12 17h1v1h-1zM14 17h1v1h-1zM15 17h1v1h-1zM16 17h1v1h-1zM20 17h1v1h-1zM21 17h1v1h-1zM0 18h1v1h-1zM1 18h1v1h-1zM2 18h1v1h-1zM3 18h1v1h-1zM4 18h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM12 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM22 18h1v1h-1zM23 18h1v1h-1zM24 18h1v1h-1zM0 19h1v1h-1zM6 19h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM12 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM20 19h1v1h-1zM21 19h1v1h-1zM0 20h1v1h-1zM2 20h1v1h-1zM3 20h1v1h-1zM4 20h1v1h-1zM6 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM10 20h1v1h-1zM13 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM17 20h1v1h-1zM18 20h1v1h-1zM19 20h1v1h-1zM20 20h1v1h-1zM22 20h1v1h-1zM0 21h1v1h-1zM2 21h1v1h-1zM3 21h1v1h-1zM4 21h1v1h-1zM6 21h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM10 21h1v1h-1zM11 21h1v1h-1zM12 21h1v1h-1zM14 21h1v1h-1zM17 21h1v1h-1zM18 21h1v1h-1zM20 21h1v1h-1zM21 21h1v1h-1zM22 21h1v1h-1zM23 21h1v1h-1zM24 21h1v1h-1zM0 22h1v1h-1zM2 22h1v1h-1zM3 22h1v1h-1zM4 22h1v1h-1zM6 22h1v1h-1zM8 22h1v1h-1zM12 22h1v1h-1zM21 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM0 23h1v1h-1zM6 23h1v1h-1zM9 23h1v1h-1zM12 23h1v1h-1zM15 23h1v1h-1zM16 23h1v1h-1zM17 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM21 23h1v1h-1zM24 23h1v1h-1zM0 24h1v1h-1zM1 24h1v1h-1zM2 24h1v1h-1zM3 24h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM6 24h1v1h-1zM8 24h1v1h-1zM13 24h1v1h-1zM17 24h1v1h-1zM18 24h1v1h-1zM19 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM22 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1z');
+  svg.append(path);
   return svg;
 }
 
 function renderContactPanel(){
-  const panel=$('#panel-contact'); panel.innerHTML='';
-  panel.append(panelTitle('Contact Information'));
+  const list=$('#contactList'); list.innerHTML='';
 
-  const list=el('div','contact-list');
   [CONTACT.imam, CONTACT.management].forEach(c=>{
     const row=el('div','crow');
-    row.append(el('div','crow-avatar', initials(c.name)));
-    const info=el('div','crow-info');
-    info.append(el('div','crow-role', c.role));
-    info.append(el('div','crow-value', c.name));
-    const phoneLine=el('div','crow-phone-line');
-    phoneLine.append(phoneIcon());
-    phoneLine.append(el('span','crow-phone', c.phone));
-    if(THEME==='light'){
-      // Reference shows the phone right-aligned on its own column, sibling
-      // of the role/name block — not stacked inside it. Dark theme keeps the
-      // original inline-stacked layout untouched.
-      row.append(info);
-      row.append(phoneLine);
-    } else {
-      info.append(phoneLine);
-      row.append(info);
-    }
+    row.append(el('div','avatar', initials(c.name)));
+    const info=el('div','cinfo');
+    info.append(el('div','crole', c.role));
+    info.append(el('div','cname', c.name));
+    row.append(info);
+    const phone=el('div','cphone');
+    phone.append(phoneIcon());
+    phone.append(document.createTextNode(c.phone));
+    row.append(phone);
     list.append(row);
   });
-  panel.append(list);
 
-  const wa=el('div','wa-block');
-  const qr=el('div','qr-placeholder');
-  qr.append(qrPlaceholderIcon());
-  wa.append(qr);
-  const waText=el('div','wa-text');
-  if(THEME==='light'){
-    // Reference drops the "WHATSAPP UPDATES" eyebrow label in favour of a
-    // stacked title (emoji + lead line) + subtitle, matching the title/
-    // description hierarchy used elsewhere on the board. Dark theme keeps
-    // its original role-label + inline lead/tail structure untouched.
-    waText.append(el('div','wa-title', '💬 ' + CONTACT.whatsapp.lead));
-    waText.append(el('div','wa-subtitle', 'Scan to chat on WhatsApp'));
-  } else {
-    waText.append(el('div','crow-role', CONTACT.whatsapp.role));
-    const waValue=el('div','crow-value');
-    waValue.append(el('span','wa-lead', CONTACT.whatsapp.lead));
-    waValue.append(document.createTextNode(' '));
-    waValue.append(el('span','wa-tail', CONTACT.whatsapp.tail));
-    waText.append(waValue);
-  }
-  waText.append(el('div','crow-phone', 'QR image pending'));
-  wa.append(waText);
-  panel.append(wa);
+  const qrRow=el('div','cqr');
+  const qr=el('div','qr');
+  qr.append(qrPlaceholderSvg());
+  qrRow.append(qr);
+  const txt=el('div','cqr-txt');
+  const t1=el('div','t1');
+  t1.append(whatsappIcon());
+  t1.append(document.createTextNode(CONTACT.whatsapp.lead));
+  txt.append(t1);
+  txt.append(el('div','t2', 'Scan to chat on WhatsApp'));
+  qrRow.append(txt);
+  list.append(qrRow);
 }
 
 // ============================================================================
 //  CLOCK / TIMERS
 // ============================================================================
-function tickClock(){ const t=$('#time-en'); if(t) t.textContent=fmtHM(new Date()); }
-function setHeaderDate(){
-  const d=new Date();
-  $('#date-en').textContent=englishDate(d);
-  $('#date-ar').textContent=hijriDate(d);
+function tickClock(){
+  const now=new Date();
+  const dline=$('#dateline'); if(dline) dline.textContent=now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long'});
+  const clk=$('#clock'); if(clk) clk.textContent=fmtHM(now);
+}
+function setHeaderHijri(){
+  const h=$('#hijri'); if(h) h.textContent=hijriDate(new Date());
 }
 function startTimers(){
   setInterval(()=>{ tickRing(); tickClock(); }, 1000);
-  setInterval(setHeaderDate, 60000);
+  setInterval(setHeaderHijri, 60000);
   setInterval(advanceReminder, REMINDER_ROTATE_MS);
 }
 
@@ -643,7 +551,7 @@ function startTimers(){
 //  BOOT
 // ============================================================================
 async function boot(){
-  setHeaderDate(); tickClock();
+  tickClock(); setHeaderHijri();
   renderReminderPanel();   // hardcoded verse — no data dependency, show immediately
   renderContactPanel();    // static placeholder — no data dependency, show immediately
 
