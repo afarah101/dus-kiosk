@@ -14,6 +14,7 @@ import { getFirestore, doc, getDoc, collection, getDocs }
 
 const LOG = '[kiosk]';
 const REMINDER_ROTATE_MS = 15000;   // Daily Reminder panel advances on its own timer
+const EVENTS_ROTATE_MS = 10000;
 
 const state = {
   prayer:  { data:null, error:null, path:null, sunrise:null },
@@ -24,10 +25,21 @@ const state = {
 // ---- Contact info: static, no Firestore collection backs this. ----
 // WhatsApp QR image asset not yet provided — see qrCodeSvg() below.
 const CONTACT = {
-  contactUs:  { role:"Contact Us", subtitle:"Masjid Admin", avatar:"AD", phone:"+44 7535 545816", email:"admin@dusunnah.com" },
-  management: { role:"Masjid Management", name:"Daar Us Sunnah Office", phone:"020 7946 0958" },
+  contactUs:  { role:"Imam", subtitle:"Masjid Daar us Sunnah", avatar:"IM", phone:"+44 7535 545816" },
+  management: { role:"Masjid Management", name:"Daar Us Sunnah Office", email:"admin@dusunnah.com" },
   whatsapp:   { lead:"Message the Imam" },
 };
+
+const EVENT_DESC_FALLBACK = {
+  "important things every new muslim needs to know": "Essential foundations of Islām",
+  "the effect of the qur'an on the soul": "A reminder on the Qur'an's impact on the heart and soul.",
+  "memorisation of juz 'amma": "Memorisation of Juzʾ ʿAmma",
+};
+function descFallback(title, rawDesc){
+  if(rawDesc && String(rawDesc).trim()) return rawDesc;      // Firestore desc wins
+  const key = String(title||'').toLowerCase().replace(/[’']/g,"'").replace(/\s+/g,' ').trim();
+  return EVENT_DESC_FALLBACK[key] || rawDesc || null;         // map, else stay blank
+}
 
 // ---- HARDCODED verses (Muhsin Khan English). Arabic on top, translation below. ----
 // Daily rotation Sun–Thu/Sat; Friday auto-trigger swaps to the Jumuʿah set.
@@ -104,6 +116,7 @@ function timeOnDate(base, raw){
 function fmt12(raw){ const d=timeOnDate(new Date(),raw); return d?fmtHM(d):(raw?String(raw):'—'); }
 function fmtHM(d){ let h=d.getHours(),m=d.getMinutes(); const ap=h>=12?'PM':'AM'; h=h%12||12; return `${h}:${pad(m)} ${ap}`; }
 function fmtMins(ms){ const m=Math.max(0,Math.round(ms/60000)); if(m<60) return m+'m'; const h=Math.floor(m/60),mm=m%60; return mm?`${h}h ${mm}m`:`${h}h`; }
+function addMins(raw, mins){ const d=timeOnDate(new Date(), raw); if(!d) return raw; d.setMinutes(d.getMinutes()+mins); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function toDate(v){ if(!v) return null; if(typeof v?.toDate==='function') return v.toDate(); const d=new Date(v); return isNaN(d)?null:d; }
 function pick(obj, keys){ for(const k of keys){ if(obj && obj[k]!=null && obj[k]!=='') return obj[k]; } return null; }
 
@@ -159,7 +172,7 @@ async function loadPrayer(db){
       fajr:   {begin:row.f, iqama:row.fj},
       dhuhr:  {begin:row.z, iqama:row.zj},
       asr:    {begin:row.a, iqama:row.aj},
-      maghrib:{begin:row.m, iqama:null},
+      maghrib:{begin:row.m, iqama:addMins(row.m,10)},
       isha:   {begin:row.i, iqama:row.ij},
       jumuah: {begin:row.zj, iqama:row.zj},
     };
@@ -232,7 +245,7 @@ function combinedSchedule(){
     const desc=pick(ev,['description','desc','details','info']);
     return {
       date: toDate(pick(ev,['isoDate','date','datetime','start'])),
-      title, desc,
+      title, desc: descFallback(title, desc),
       time: pick(ev,['time']),
       location: locationForTitle(title),
     };
@@ -246,7 +259,7 @@ function combinedSchedule(){
     const rawDesc=pick(les,['desc','description']);
     return {
       date, title,
-      desc: stripTeacherAttribution(rawDesc),
+      desc: descFallback(title, stripTeacherAttribution(rawDesc)),
       time: pick(les,['time','start']),
       location: locationForTitle(title),
     };
@@ -365,7 +378,8 @@ function renderPrayersPanel(){
     if(r.id==='jumuah') meta.append(el('span','fritag','Fri'));
     if(isNext) meta.append(el('span','pill-next','Next'));
     row.append(meta);
-    row.append(el('span','ptime', r.begin?fmt12(r.begin):'—'));
+    const jt = r.iqama ?? r.begin;
+    row.append(el('span','ptime', jt?fmt12(jt):'—'));
     list.append(row);
   });
 }
@@ -404,13 +418,27 @@ function weekEventsForDisplay(perDayCap, totalDaysCap){
   return items;
 }
 
+let eventsPage = 0;
+function eventPages(){
+  const all=combinedSchedule();
+  if(!all.length) return [];
+  if(all.length<=3) return [all];
+  const count=Math.ceil(all.length/3);
+  const pages=[];
+  for(let p=0;p<count;p++){
+    const page=[];
+    for(let k=0;k<3;k++) page.push(all[(p*3+k)%all.length]);
+    pages.push(page);
+  }
+  return pages;
+}
+function advanceEvents(){ const pages=eventPages(); eventsPage = pages.length>1 ? (eventsPage+1)%pages.length : 0; renderEventsPanel(); }
 function renderEventsPanel(){
   const list=$('#eventsList'); list.innerHTML='';
-  // perDayCap=2 so a weekend day with more than one event isn't silently
-  // truncated to a single item; totalDaysCap=3 guarantees 3 events display
-  // even when the weekend itself only carries 1-2.
-  const items=weekEventsForDisplay(2,3);
-  items.forEach(item=>{
+  const pages=eventPages();
+  if(!pages.length) return;
+  if(eventsPage>=pages.length) eventsPage=0;
+  pages[eventsPage].forEach(item=>{
     const wd=item.date.toLocaleDateString('en-GB',{weekday:'short'});
     const mo=item.date.toLocaleDateString('en-GB',{month:'short'});
     const row=el('div','event');
@@ -485,10 +513,10 @@ function whatsappIcon(){
 function renderContactPanel(){
   const list=$('#contactList'); list.innerHTML='';
 
-  // "Contact Us" row uses the same avatar+crole+cname structure as Masjid
-  // Management below, but still rendered separately (not folded into that
-  // shared forEach) because it also carries a second, stacked email line
-  // (.cphone-stack/.cemail) that Masjid Management's row doesn't have.
+  // Both rows share the same avatar+crole+cname structure and end in exactly
+  // one contact line (.cphone or .cemail), so their vertical height/spacing
+  // matches — the "Contact Us" row previously also carried a stacked email
+  // line here; that's now Masjid Management's line below instead.
   const cu=CONTACT.contactUs;
   const cuRow=el('div','crow');
   cuRow.append(el('div','avatar', cu.avatar));
@@ -496,13 +524,10 @@ function renderContactPanel(){
   cuInfo.append(el('div','crole', cu.role));
   cuInfo.append(el('div','cname', cu.subtitle));
   cuRow.append(cuInfo);
-  const cuMeta=el('div','cphone-stack');
   const cuPhone=el('div','cphone');
   cuPhone.append(phoneIcon());
   cuPhone.append(document.createTextNode(cu.phone));
-  cuMeta.append(cuPhone);
-  cuMeta.append(el('div','cemail', cu.email));
-  cuRow.append(cuMeta);
+  cuRow.append(cuPhone);
   list.append(cuRow);
 
   [CONTACT.management].forEach(c=>{
@@ -512,10 +537,7 @@ function renderContactPanel(){
     info.append(el('div','crole', c.role));
     info.append(el('div','cname', c.name));
     row.append(info);
-    const phone=el('div','cphone');
-    phone.append(phoneIcon());
-    phone.append(document.createTextNode(c.phone));
-    row.append(phone);
+    row.append(el('div','cemail', c.email));
     list.append(row);
   });
 
@@ -551,6 +573,7 @@ function startTimers(){
   setInterval(()=>{ tickRing(); tickClock(); }, 1000);
   setInterval(setHeaderHijri, 60000);
   setInterval(advanceReminder, REMINDER_ROTATE_MS);
+  setInterval(advanceEvents, EVENTS_ROTATE_MS);
   startUpdateChecks();
 }
 
