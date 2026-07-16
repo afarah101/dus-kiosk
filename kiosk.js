@@ -9,7 +9,7 @@
 //   oneOffEvents/{id}       -> {title,speaker,location,description?,time,date,isoDate,poster}
 //   lessons/{id}            -> {day,title,time,desc,teacher|speaker,cancelled,cancelledThisWeek}
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import { getFirestore, doc, getDoc, collection, getDocs }
+import { getFirestore, doc, getDoc, collection, getDocs, setDoc, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
 const LOG = '[kiosk]';
@@ -30,15 +30,21 @@ const CONTACT = {
   whatsapp:   { lead:"Message the Imam" },
 };
 
-const EVENT_DESC_FALLBACK = {
-  "important things every new muslim needs to know": "Essential foundations of Islām",
-  "the effect of the qur'an on the soul": "A reminder on the Qur'an's impact on the heart and soul.",
-  "memorisation of juz 'amma": "Memorisation of Juzʾ ʿAmma",
-};
+const EVENT_DESC_RULES = [
+  { match: "new muslim",        line: "Essential foundations of Islām" },
+  { match: "effect of the qur", line: "A reminder on the Qur'an's impact on the heart and soul." },
+  { match: "juz",               line: "Memorisation of Juzʾ ʿAmma" },
+];
+function normTitle(s){
+  return String(s||'').toLowerCase()
+    .replace(/[’‘'`ʿʾ‘’ʿʾ]/g,'')
+    .replace(/\s+/g,' ').trim();
+}
 function descFallback(title, rawDesc){
-  if(rawDesc && String(rawDesc).trim()) return rawDesc;      // Firestore desc wins
-  const key = String(title||'').toLowerCase().replace(/[’']/g,"'").replace(/\s+/g,' ').trim();
-  return EVENT_DESC_FALLBACK[key] || rawDesc || null;         // map, else stay blank
+  if(rawDesc && String(rawDesc).trim()) return rawDesc;   // Firestore desc wins
+  const key = normTitle(title);
+  for(const r of EVENT_DESC_RULES){ if(key.includes(r.match)) return r.line; }
+  return rawDesc || null;                                  // else stay blank
 }
 
 // ---- HARDCODED verses (Muhsin Khan English). Arabic on top, translation below. ----
@@ -574,6 +580,9 @@ function startTimers(){
   setInterval(setHeaderHijri, 60000);
   setInterval(advanceReminder, REMINDER_ROTATE_MS);
   setInterval(advanceEvents, EVENTS_ROTATE_MS);
+  setInterval(writeHeartbeat, HEARTBEAT_MS);
+  setInterval(renderPrayersPanel, PANEL_RERENDER_MS);
+  setInterval(refreshData, DATA_REFRESH_MS);
   startUpdateChecks();
 }
 
@@ -590,6 +599,10 @@ function startTimers(){
 // ============================================================================
 const UPDATE_CHECK_MS = 7*60*1000;   // 7 min — middle of the requested 5-10 min range
 let runningSourceHash = null;
+const HEARTBEAT_MS = 60000;   // kiosk reports alive every 60s
+let hbDb = null;              // set in boot() once Firestore is ready
+const PANEL_RERENDER_MS = 30000;        // 30s — recompute NEXT highlight (no network)
+const DATA_REFRESH_MS   = 30*60*1000;   // 30 min — re-read Firestore (rollover + admin edits)
 
 async function sha256Hex(text){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -626,6 +639,37 @@ function startUpdateChecks(){
   setInterval(checkForUpdate, UPDATE_CHECK_MS);
 }
 
+async function writeHeartbeat(){
+  if(!hbDb) return;   // Firestore not ready -> skip (watcher will see staleness)
+  try{
+    await setDoc(doc(hbDb,'kioskHealth','dus-tv'), {
+      lastSeen: serverTimestamp(),
+      prayerLoaded: !!state.prayer.data,
+      eventsCount: state.events.list.length,
+      lessonsCount: state.lessons.list.length,
+      ua: navigator.userAgent,
+      href: location.href,
+    }, {merge:true});
+  }catch(e){
+    console.error(`${LOG} heartbeat write failed -> reason=${(e&&(e.code||e.message))||'unknown'}`);
+  }
+}
+
+// boot()'s own `db` is local to that function; hbDb is the module-scope
+// handle to the same Firestore instance (assigned right after
+// db=getFirestore(app) in boot()), so it's reused here rather than
+// introducing a third handle.
+async function refreshData(){
+  if(!hbDb) return;                       // Firestore never initialised -> skip
+  try{
+    await Promise.allSettled([loadPrayer(hbDb), loadEvents(hbDb), loadLessons(hbDb)]);
+    renderRingPanel(); renderPrayersPanel(); renderEventsPanel();
+    console.info(`${LOG} data refreshed`);
+  }catch(e){
+    console.error(`${LOG} data refresh failed -> reason=${(e&&(e.code||e.message))||'unknown'}`);
+  }
+}
+
 // ============================================================================
 //  BOOT
 // ============================================================================
@@ -639,8 +683,10 @@ async function boot(){
     const cfg=await loadConfig();
     const app=initializeApp({apiKey:cfg.apiKey, projectId:cfg.projectId, authDomain:`${cfg.projectId}.firebaseapp.com`});
     db=getFirestore(app);
+    hbDb=db;
     console.info(`${LOG} firebase initialised for project`, cfg.projectId);
     await Promise.allSettled([loadPrayer(db), loadEvents(db), loadLessons(db)]);
+    writeHeartbeat();
   }catch(e){
     const reason=e.code||e.detail||e.message||'config-missing';
     console.error(`${LOG} config/init failed -> reason=config-missing detail=${reason}`);
