@@ -154,6 +154,25 @@ function reasonFor(err){
   return String(c);
 }
 
+// Row -> the six display rows. Extracted so today and tomorrow are built by
+// exactly the same code and cannot drift apart.
+function rowToTimes(row){
+  return {
+    fajr:   {begin:row.f, iqama:row.fj},
+    dhuhr:  {begin:row.z, iqama:row.zj},
+    asr:    {begin:row.a, iqama:row.aj},
+    maghrib:{begin:row.m, iqama:addMins(row.m,10)},
+    isha:   {begin:row.i, iqama:row.ij},
+    jumuah: {begin:row.zj, iqama:row.zj},
+  };
+}
+// The two _dayNum/d-prefix lookups the day row has always used, generalised so
+// tomorrow is found the same tolerant way.
+function findEntry(entries, dayNum){
+  return entries.find(e=>String(e._dayNum)===String(dayNum))
+      || entries.find(e=>String(pick(e,['d'])||'').startsWith(String(dayNum)+' '));
+}
+
 async function loadPrayer(db){
   const today=new Date(), mk=monthKey(today), dayNum=today.getDate();
   const path=`prayerTimes/${mk} [entry _dayNum=${dayNum}]`;
@@ -167,23 +186,37 @@ async function loadPrayer(db){
       return;
     }
     const entries=snap.data().entries||[];
-    const row=entries.find(e=>String(e._dayNum)===String(dayNum))
-            || entries.find(e=>String(pick(e,['d'])||'').startsWith(String(dayNum)+' '));
+    const row=findEntry(entries, dayNum);
     if(!row){
       state.prayer.error='no-doc-for-today';
       console.error(`${LOG} prayer read failed -> reason=no-entry-for-day path=prayerTimes/${mk} _dayNum=${dayNum}`);
       return;
     }
-    state.prayer.data={
-      fajr:   {begin:row.f, iqama:row.fj},
-      dhuhr:  {begin:row.z, iqama:row.zj},
-      asr:    {begin:row.a, iqama:row.aj},
-      maghrib:{begin:row.m, iqama:addMins(row.m,10)},
-      isha:   {begin:row.i, iqama:row.ij},
-      jumuah: {begin:row.zj, iqama:row.zj},
-    };
+    state.prayer.data=rowToTimes(row);
     state.prayer.sunrise=row.s||null;
     console.info(`${LOG} prayer entry loaded for _dayNum=${dayNum}`);
+
+    // Tomorrow, for the next-occurrence roll. The whole month is already sat
+    // in `entries`, so this costs nothing on 30 days in 31; only a month
+    // boundary needs a second read. A month that has not been seeded yet
+    // leaves tomorrow null, every row simply holds today's time, and nothing
+    // blanks or errors — the board must never go empty on a wall.
+    state.prayer.tomorrow=null;
+    try{
+      const tmr=new Date(today.getFullYear(), today.getMonth(), dayNum+1);
+      let tRow=null;
+      if(tmr.getMonth()===today.getMonth()){
+        tRow=findEntry(entries, tmr.getDate());
+      }else{
+        const tmk=monthKey(tmr);
+        const tSnap=await getDoc(doc(db,'prayerTimes',tmk));
+        if(tSnap.exists()) tRow=findEntry(tSnap.data().entries||[], tmr.getDate());
+        else console.info(`${LOG} no doc for next month path=prayerTimes/${tmk} -> rows hold today's times`);
+      }
+      if(tRow) state.prayer.tomorrow=rowToTimes(tRow);
+    }catch(e){
+      console.error(`${LOG} tomorrow read failed -> reason=${reasonFor(e)} -> rows hold today's times`);
+    }
   }catch(e){
     state.prayer.error=reasonFor(e);
     console.error(`${LOG} prayer read failed -> reason=${reasonFor(e)} path=prayerTimes/${mk}`, e);
@@ -371,20 +404,48 @@ function tickRing(){
   }
 }
 
+// Jumu'ah is deliberately not rollable. It is a standing weekly row tagged
+// "Fri", not a today row, so "tomorrow's Jumu'ah" would be a claim about the
+// wrong day entirely — on a Saturday it would point at Sunday.
+const ROLLABLE = new Set(['fajr','dhuhr','asr','maghrib','isha']);
+
+// Each row shows the next time that prayer will actually be prayed. Once
+// today's jamā'ah has gone the row moves to tomorrow's time rather than
+// leaving a time that is already history on a wall people plan around. The
+// timetable steps on Sundays, so this earns its keep on a Saturday evening:
+// Sunday's Fajr jamā'ah is fifteen minutes later than Saturday's, and a board
+// still showing Saturday's would have people arrive to a locked door.
+function rollRow(r, now){
+  const shown = r.iqama ?? r.begin;
+  const tmr = state.prayer.tomorrow;
+  if(!tmr || !shown || !ROLLABLE.has(r.id)) return {time:shown, rolled:false};
+  const at = timeOnDate(now, shown);
+  // Keep the row for the whole minute the jamā'ah starts on — it has not
+  // "passed" while it is happening.
+  if(!at || now.getTime() < at.getTime()+60000) return {time:shown, rolled:false};
+  const t = tmr[r.id];
+  const next = t ? (t.iqama ?? t.begin) : null;
+  return next ? {time:next, rolled:true} : {time:shown, rolled:false};
+}
+
 function renderPrayersPanel(){
   const list=$('#prayerList'); list.innerHTML='';
   if(!state.prayer.data) return;
   const sched=computeSchedule();
+  const now=new Date();
   sched.rows.forEach(r=>{
     const isNext = sched.next && r.id===sched.next.id && !sched.rollover;
+    const {time:jt, rolled} = rollRow(r, now);
     const row=el('div','prow'+(isNext?' next':'')+(r.id==='jumuah'?' jumuah':''));
     const meta=el('div','pmeta');
     meta.append(el('span','pname', r.label));
     meta.append(ar('par', r.ar));
     if(r.id==='jumuah') meta.append(el('span','fritag','Fri'));
     if(isNext) meta.append(el('span','pill-next','Next'));
+    // Reuses .fritag verbatim — same size, weight, letter-spacing and --tt
+    // colour as the existing "Fri" marker. No new CSS, font or colour.
+    if(rolled) meta.append(el('span','fritag','Tomorrow'));
     row.append(meta);
-    const jt = r.iqama ?? r.begin;
     row.append(el('span','ptime', jt?fmt12(jt):'—'));
     list.append(row);
   });
