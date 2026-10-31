@@ -668,12 +668,67 @@ let hbDb = null;              // set in boot() once Firestore is ready
 const PANEL_RERENDER_MS = 30000;        // 30s — recompute NEXT highlight (no network)
 const DATA_REFRESH_MS   = 30*60*1000;   // 30 min — re-read Firestore (rollover + admin edits)
 
+// ---- healthchecks.io heartbeats --------------------------------------------
+// Two physical Raspberry Pis serve this same deployed bundle, so the code
+// cannot tell them apart on its own — browser JS has no access to the OS
+// hostname. Identity comes solely from a ?kiosk=<name> param baked into each
+// Pi's Chromium autostart URL (see the deploy note in the goal report):
+//   dus-tv      -> https://dus-kiosk.vercel.app/?kiosk=dus-tv
+//   dus-sisters -> https://dus-kiosk.vercel.app/?kiosk=dus-sisters
+// If that param is missing or unrecognised the per-Pi ping is deliberately
+// SKIPPED rather than defaulting to one of them: pinging the wrong URL would
+// make a misconfigured Pi look healthy under the other Pi's name and hide the
+// very fault the heartbeat exists to catch.
+const PI_HEARTBEAT_URLS = {
+  'dus-tv':      'https://hc-ping.com/9c5d691c-528e-4ba6-9e79-9c685c197fdd',
+  'dus-sisters': 'https://hc-ping.com/47627fcd-f421-402b-b944-b4fafe1d3bf2',
+};
+const SITE_REACHABLE_URL = 'https://hc-ping.com/76206ec9-a990-4372-90ac-9b96be019dfb';
+const KIOSK_ID = new URLSearchParams(location.search).get('kiosk');
+
+// Fire-and-forget by construction: never awaited, mode:'no-cors' (the response
+// is never read, and this also avoids CORS console noise), and every failure
+// path swallowed to a warning. A dead ping endpoint must never disturb the
+// update check it rides on.
+function ping(url, label){
+  try{
+    fetch(url, {mode:'no-cors', cache:'no-store'})
+      .catch(e=>console.warn(`${LOG} ${label} ping failed:`, e.message));
+  }catch(e){
+    console.warn(`${LOG} ${label} ping threw:`, e.message);
+  }
+}
+
+// Proves THIS Pi's browser is powered on and still executing JS. Fires every
+// cycle unconditionally — including when the self-fetch below fails — so
+// healthchecks.io can distinguish "this Pi is down" from "the site is down".
+function pingPiHeartbeat(){
+  const url = KIOSK_ID ? PI_HEARTBEAT_URLS[KIOSK_ID] : null;
+  if(!url){
+    const what = KIOSK_ID ? `"${KIOSK_ID}" is not a known kiosk id` : '?kiosk= is missing from the URL';
+    console.warn(`${LOG} per-Pi heartbeat SKIPPED — ${what}. Expected one of: ${Object.keys(PI_HEARTBEAT_URLS).join(', ')}`);
+    return;
+  }
+  ping(url, `pi-heartbeat[${KIOSK_ID}]`);
+}
+
+// Proves the deployed site is actually reachable from the masjid's network.
+// Rides on the update check's existing self-fetch success — deliberately not a
+// second network call, so it can never report "reachable" independently of the
+// fetch that the kiosk genuinely depends on.
+function pingSiteReachable(){
+  ping(SITE_REACHABLE_URL, 'site-reachable');
+}
+
 async function sha256Hex(text){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
 async function checkForUpdate(){
+  // Unconditional and first: this must report even when the site fetch below
+  // fails, otherwise a network outage would look identical to a dead Pi.
+  pingPiHeartbeat();
   try{
     // cache:'no-store' + a timestamp query param: belt-and-braces against
     // both the browser's own HTTP cache and any CDN/edge cache Vercel puts
@@ -682,6 +737,9 @@ async function checkForUpdate(){
     // unchanged file look different every time from a cache-varying response.
     const res = await fetch(`kiosk.js?_=${Date.now()}`, {cache:'no-store'});
     if(!res.ok) throw new Error(`fetch failed: ${res.status}`);
+    // Placed here, before the baseline early-return below, so it reports on
+    // every successful fetch including the very first one at boot.
+    pingSiteReachable();
     const hash = await sha256Hex(await res.text());
     if(runningSourceHash===null){
       runningSourceHash = hash;   // first check just establishes the baseline — never reloads
