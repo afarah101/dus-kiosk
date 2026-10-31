@@ -163,7 +163,10 @@ function rowToTimes(row){
     asr:    {begin:row.a, iqama:row.aj},
     maghrib:{begin:row.m, iqama:addMins(row.m,10)},
     isha:   {begin:row.i, iqama:row.ij},
-    jumuah: {begin:row.zj, iqama:row.zj},
+    // Jumuʿah replaces Dhuhr, so the published Dhuhr jamāʿah (zj) is the
+    // khuṭbah, and the congregational prayer follows 15 minutes later. Both
+    // columns read zj before, which showed the khuṭbah time twice.
+    jumuah: {begin:row.zj, iqama:addMins(row.zj,15)},
   };
 }
 // The two _dayNum/d-prefix lookups the day row has always used, generalised so
